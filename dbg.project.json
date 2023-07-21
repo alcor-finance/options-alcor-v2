@@ -1,0 +1,13 @@
+{
+    "contractsDir": "contracts-dbg",
+    "selectedContract": "Test1",
+    "autoOpen": true,
+    "breakOnEntry": false,
+    "symbols": {
+        "hardhat": {
+            "projectPaths": [
+                "/Users/kirillbogomolov/Desktop/Alcor_Finance/options-with-limit-orders"
+            ]
+        }
+    }
+}
