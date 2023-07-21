@@ -20,10 +20,9 @@ interface IAlcorPoolDeployer {
             address factory,
             address token0,
             address token1,
-            uint8 token0Decimals,
-            uint8 token1Decimals,
             uint256 expiration,
-            uint160 strikePriceX96,
+            uint160 strikePrice,
+            uint8 fee,
             int24 tickSpacing
         );
 }

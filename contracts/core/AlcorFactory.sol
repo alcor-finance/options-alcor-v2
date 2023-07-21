@@ -62,13 +62,13 @@ contract AlcorFactory is IAlcorFactory, AlcorPoolDeployer, NoDelegateCall {
         emit OwnerChanged(address(0), msg.sender);
 
         // kirrya:
-        feeAmountTickSpacing[0] = 10;
-        emit FeeAmountEnabled(0, 10);
+        // feeAmountTickSpacing[0] = 10;
+        // emit FeeAmountEnabled(0, 10);
 
-        // feeAmountTickSpacing[500] = 10;
-        // emit FeeAmountEnabled(500, 10);
-        // feeAmountTickSpacing[3000] = 60;
-        // emit FeeAmountEnabled(3000, 60);
+        feeAmountTickSpacing[500] = 10;
+        emit FeeAmountEnabled(500, 10);
+        feeAmountTickSpacing[3000] = 60;
+        emit FeeAmountEnabled(3000, 60);
         // feeAmountTickSpacing[10000] = 200;
         // emit FeeAmountEnabled(10000, 200);
     }
@@ -76,8 +76,9 @@ contract AlcorFactory is IAlcorFactory, AlcorPoolDeployer, NoDelegateCall {
     function createPoolCallOption(
         address tokenA,
         address tokenB,
+        uint8 poolFee,
         uint256 optionExpiration,
-        uint160 optionStrikePrice
+        uint160 optionStrikePriceX96
     ) external virtual noDelegateCall returns (address pool) {
         require(tokenA != tokenB);
         (address token0, address token1) = tokenA < tokenB
@@ -93,7 +94,7 @@ contract AlcorFactory is IAlcorFactory, AlcorPoolDeployer, NoDelegateCall {
         require(tickSpacing != 0);
         require(
             getPool[token0][token1][optionExpiration][isCall][
-                optionStrikePrice
+                optionStrikePriceX96
             ] == address(0)
         );
         pool = deployCallOption(
@@ -101,32 +102,33 @@ contract AlcorFactory is IAlcorFactory, AlcorPoolDeployer, NoDelegateCall {
             token0,
             token1,
             optionExpiration,
-            optionStrikePrice,
+            poolFee,
+            optionStrikePriceX96,
             tickSpacing
         );
         getPool[token0][token1][optionExpiration][isCall][
-            optionStrikePrice
+            optionStrikePriceX96
         ] = pool;
         // populate mapping in the reverse direction, deliberate choice to avoid the cost of comparing addresses
         getPool[token1][token0][optionExpiration][isCall][
-            optionStrikePrice
+            optionStrikePriceX96
         ] = pool;
         // lookup table for pools
         isPool[pool] = true;
 
         _getStrikesForPairAndExpiration[token0][token1][optionExpiration][
             isCall
-        ].push(optionStrikePrice);
+        ].push(optionStrikePriceX96);
         _getStrikesForPairAndExpiration[token1][token0][optionExpiration][
             isCall
-        ].push(optionStrikePrice);
+        ].push(optionStrikePriceX96);
 
         emit PoolCreated(
             token0,
             token1,
             optionExpiration,
             isCall,
-            optionStrikePrice,
+            optionStrikePriceX96,
             tickSpacing,
             pool
         );

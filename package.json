@@ -1,9 +1,9 @@
 {
   "name": "AlcorFinance",
-  "description": "Alcor Finance core smart contracts",
+  "description": "Alcor Finance: Options AMM",
   "license": "None",
   "publishConfig": {
-    "access": "public"
+    "access": "restricted"
   },
   "version": "1.0.1",
   "homepage": "alcor.finance",

@@ -16,9 +16,10 @@ contract AlcorPoolDeployer is IAlcorPoolDeployer {
         address factory;
         address token0;
         address token1;
+        uint8 token0Decimals;
+        uint8 token1Decimals;
         uint256 expiration;
-        uint160 optionStrikePriceX96;
-        uint8 poolFee;
+        uint160 strikePrice;
         int24 tickSpacing;
     }
 
@@ -37,7 +38,6 @@ contract AlcorPoolDeployer is IAlcorPoolDeployer {
         address token0,
         address token1,
         uint256 optionExpiration,
-        uint8 poolFee,
         uint160 optionStrikePriceX96,
         int24 tickSpacing
     ) internal virtual returns (address pool) {
@@ -45,12 +45,12 @@ contract AlcorPoolDeployer is IAlcorPoolDeployer {
             factory: factory,
             token0: token0,
             token1: token1,
+            // token0Decimals: IERC20Minimal(token0).decimals(),
+            // token1Decimals: IERC20Minimal(token1).decimals(),
             expiration: optionExpiration,
-            poolFee: poolFee,
-            optionStrikePriceX96: optionStrikePriceX96,
+            strikePrice: optionStrikePriceX96,
             tickSpacing: tickSpacing
         });
-
         // TODO: CHANGE IT BACK TO AlcorPool
         pool = address(
             new AlcorPoolCallOption{
