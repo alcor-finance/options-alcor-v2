@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "../prb-math/PRBMathSD59x18.sol";
+import "../../dependencies/prb-math/contracts/PRBMathSD59x18.sol";
 
 library Statistics {
     using PRBMathSD59x18 for int256;
