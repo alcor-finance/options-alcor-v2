@@ -2,20 +2,9 @@
 pragma solidity ^0.8.18;
 pragma abicoder v2;
 
-import "../dependencies/ReentrancyGuard.sol";
+// import "../dependencies/ReentrancyGuard.sol";
 
-import {SafeCast} from "../libraries/SafeCast.sol";
-import {Tick} from "../libraries/Tick.sol";
-import {TickBitmap} from "../libraries/TickBitmap.sol";
-import {Position} from "../libraries/Position.sol";
-import {Oracle} from "../libraries/Oracle.sol";
 
-import {FullMath} from "../libraries/FullMath.sol";
-import {FixedPoint128} from "../libraries/FixedPoint128.sol";
-import {TransferHelper} from "../libraries/TransferHelper.sol";
-import {TickMath} from "../libraries/TickMath.sol";
-import {SqrtPriceMath} from "../libraries/SqrtPriceMath.sol";
-import {SwapMath} from "../libraries/SwapMath.sol";
 
 import "../libraries/TransferHelper.sol";
 
@@ -26,28 +15,8 @@ import "hardhat/console.sol";
 contract AlcorPoolCallOption is AlcorVanillaOption {
     using SafeCast for uint256;
     using SafeCast for int256;
-    using Tick for mapping(int24 => Tick.Info);
-    using TickBitmap for mapping(int16 => uint256);
-    using Position for mapping(bytes32 => Position.Info);
-    using Position for Position.Info;
-    using Oracle for Oracle.Observation[65535];
 
-    // using UserInfoCallOption for mapping(address => UserInfoCallOption.Info);
 
-    // address public token0;
-    // address public token1;
-    // uint24 public fee;
-
-    int24 public tickSpacing;
-
-    uint128 public maxLiquidityPerTick;
-
-    uint128 public liquidity;
-
-    mapping(int24 => Tick.Info) public ticks;
-    mapping(int16 => uint256) public tickBitmap;
-    mapping(bytes32 => Position.Info) public positions;
-    Oracle.Observation[65535] public observations;
 
     constructor() {
         // int24 _tickSpacing;

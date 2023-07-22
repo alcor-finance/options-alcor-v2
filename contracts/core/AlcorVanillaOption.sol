@@ -5,19 +5,27 @@ pragma abicoder v2;
 // import "../dependencies/ReentrancyGuard.sol";
 import "./NoDelegateCall.sol";
 
-// import "../libraries/LowGasSafeMath.sol";
-import "../libraries/SafeCast.sol";
-import "../libraries/TransferHelper.sol";
+import {SafeCast} from "../libraries/SafeCast.sol";
+import {Tick} from "../libraries/Tick.sol";
+import {TickBitmap} from "../libraries/TickBitmap.sol";
+import {Position} from "../libraries/Position.sol";
+import {Oracle} from "../libraries/Oracle.sol";
 
-import "../libraries/AlcorLibraries/UserInfoCallOption.sol";
-import "../libraries/AlcorLibraries/Cryptography.sol";
-import "../libraries/AlcorLibraries/TickLibrary.sol";
+import {FullMath} from "../libraries/FullMath.sol";
+import {FixedPoint128} from "../libraries/FixedPoint128.sol";
+import {TransferHelper} from "../libraries/TransferHelper.sol";
+import {TickMath} from "../libraries/TickMath.sol";
+import {SqrtPriceMath} from "../libraries/SqrtPriceMath.sol";
+import {SwapMath} from "../libraries/SwapMath.sol";
 
 import "../interfaces/IUniswapV3Pool.sol";
 import "../interfaces/IUniswapV3Factory.sol";
 import "../interfaces/ISwapRouter.sol";
 import "../interfaces/IAlcorPoolDeployer.sol";
 import "../interfaces/IAlcorFactory.sol";
+
+import "hardhat/console.sol";
+import "../interfaces/IERC20Minimal.sol";
 
 abstract contract AlcorVanillaOption is NoDelegateCall {
     using FullMath for uint256;
@@ -26,17 +34,25 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    using TickLibrary for int24;
+    using Tick for mapping(int24 => Tick.Info);
+    using TickBitmap for mapping(int16 => uint256);
+    using Position for mapping(bytes32 => Position.Info);
+    using Position for Position.Info;
+    using Oracle for Oracle.Observation[65535];
+
+    event Initialize(uint160 sqrtPriceX96, int24 tick);
 
     error LOK();
-
-    // using Cryptography for Cryptography.SellingLimitOrder;
-    // using Cryptography for Cryptography.BuyingLimitOrder;
-    // using Cryptography for bytes32;
-
-    // using UserInfoCallOption for mapping(address => UserInfoCallOption.Info);
+    error TLU();
+    error TLM();
+    error TUM();
+    error AI();
 
     address public factory;
+
+    address public token0;
+    address public token1;
+    uint24 public fee;
 
     // accumulated protocol fees in token0/token1 units
     struct ProtocolFees {
@@ -45,14 +61,22 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     }
     ProtocolFees public protocolFees;
 
-    uint256 public token0_unclaimedProtocolFees;
-    uint256 public token1_unclaimedProtocolFees;
+    int24 public tickSpacing;
 
-    address public constant UNISWAP_V3_FACTORY =
-        0x1F98431c8aD98523631AE4a59f267346ea31F984;
-    address public constant ISWAP_ROUTER =
-        0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    uint24 public constant UNISWAP_POOL_FEE = 500;
+    uint128 public maxLiquidityPerTick;
+
+    uint128 public liquidity;
+
+    mapping(int24 => Tick.Info) public ticks;
+    mapping(int16 => uint256) public tickBitmap;
+    mapping(bytes32 => Position.Info) public positions;
+    Oracle.Observation[65535] public observations;
+
+    // address public constant UNISWAP_V3_FACTORY =
+    //     0x1F98431c8aD98523631AE4a59f267346ea31F984;
+    // address public constant ISWAP_ROUTER =
+    //     0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    // uint24 public constant UNISWAP_POOL_FEE = 500;
 
     struct OptionInfo {
         address token0;
@@ -70,7 +94,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     OptionInfo public optionMainInfo;
 
-    mapping(address => UserInfoCallOption.Info) public usersInfo;
+    // mapping(address => UserInfoCallOption.Info) public usersInfo;
 
     struct Slot0 {
         // the current price
@@ -118,6 +142,67 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         _;
     }
 
+    /// @dev Common checks for valid tick inputs.
+    function checkTicks(int24 tickLower, int24 tickUpper) private pure {
+        if (tickLower >= tickUpper) revert TLU();
+        if (tickLower < TickMath.MIN_TICK) revert TLM();
+        if (tickUpper > TickMath.MAX_TICK) revert TUM();
+    }
+
+    /// @dev Returns the block timestamp truncated to 32 bits, i.e. mod 2**32. This method is overridden in tests.
+    function _blockTimestamp() internal view virtual returns (uint32) {
+        return uint32(block.timestamp); // truncation is desired
+    }
+
+    /// @dev Get the pool's balance of token0
+    /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
+    /// check
+    function balance0() private view returns (uint256) {
+        (bool success, bytes memory data) = token0.staticcall(
+            abi.encodeWithSelector(
+                IERC20Minimal.balanceOf.selector,
+                address(this)
+            )
+        );
+        require(success && data.length >= 32);
+        return abi.decode(data, (uint256));
+    }
+
+    /// @dev Get the pool's balance of token1
+    /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
+    /// check
+    function balance1() private view returns (uint256) {
+        (bool success, bytes memory data) = token1.staticcall(
+            abi.encodeWithSelector(
+                IERC20Minimal.balanceOf.selector,
+                address(this)
+            )
+        );
+        require(success && data.length >= 32);
+        return abi.decode(data, (uint256));
+    }
+
+    function initialize(uint160 sqrtPriceX96) external {
+        if (slot0.sqrtPriceX96 != 0) revert AI();
+
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+
+        (uint16 cardinality, uint16 cardinalityNext) = observations.initialize(
+            _blockTimestamp()
+        );
+
+        slot0 = Slot0({
+            sqrtPriceX96: sqrtPriceX96,
+            tick: tick,
+            observationIndex: 0,
+            observationCardinality: cardinality,
+            observationCardinalityNext: cardinalityNext,
+            unlocked: true
+        });
+
+        emit Initialize(sqrtPriceX96, tick);
+    }
+
     function claimProtocolFees(
         address token,
         uint256 amount
@@ -136,10 +221,10 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     function getPayout() public {
         require(optionMainInfo.isExpired, "option is not expired");
-        require(
-            usersInfo[msg.sender].soldContractsAmount < 0,
-            "this method is only for buyes"
-        );
+        // require(
+        //     usersInfo[msg.sender].soldContractsAmount < 0,
+        //     "this method is only for buyes"
+        // );
         // if (optionMainInfo.payoff_token0 > 0) {
         //     usersInfo[msg.sender].soldContractsAmount = 0;
         //     uint256 amount = uint256(usersInfo[msg.sender].soldContractsAmount)
@@ -154,10 +239,10 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     function withdrawCollateral() public {
         require(optionMainInfo.isExpired, "option is not expired");
-        require(
-            usersInfo[msg.sender].soldContractsAmount > 0,
-            "this method is only for sellers"
-        );
+        // require(
+        //     usersInfo[msg.sender].soldContractsAmount > 0,
+        //     "this method is only for sellers"
+        // );
         // if (optionMainInfo.payoff_token0 < 0) {
         //     usersInfo[msg.sender].soldContractsAmount = 0;
         //     uint256 amount = uint256(usersInfo[msg.sender].soldContractsAmount)
