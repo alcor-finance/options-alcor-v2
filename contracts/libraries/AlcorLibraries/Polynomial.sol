@@ -5,44 +5,73 @@ import "../../dependencies/prb-math/contracts/PRBMathSD59x18.sol";
 
 import "hardhat/console.sol";
 
-library Polynomial {
+library Polynomials {
     using PRBMathUD60x18 for uint256;
     using PRBMathSD59x18 for int256;
 
-    function alpha12_denominator(
+    function rho_alpha_denominator(
         uint256 C0,
         uint256 CI
-    ) public view returns (uint256 result) {
-        // console.log(C0.powu(4));
-        // console.log(uint(135).div(10).mul(C0.powu(4)));
-
-        console.log("---");
-
-        uint result1 = uint(135).div(10).mul(C0.powu(4));
-        uint result2 = uint(54).div(1).mul(C0.powu(3)).mul(CI);
-        uint result3 = uint(81).div(1).mul(C0.powu(2)).mul(CI.powu(2));
-        uint result4 = uint(81).div(1).mul(C0.powu(2)).mul(CI.powu(2));
-        uint result5 = uint(135).div(10).mul(CI.powu(4));
-
-        // Вывод результатов
-        console.log(result1);
-        console.log(result2);
-        console.log(result3);
-        console.log(result4);
-        console.log(result5);
-
+    ) internal pure returns (uint256) {
         return
-            uint(135).div(10).mul(C0.powu(4)) +
-            uint(135).div(10).mul(CI.powu(4)) +
-            uint(81).div(1).mul(C0.powu(2)).mul(CI.powu(2)) -
-            uint(54).div(1).mul(CI.powu(3)).mul(C0) -
-            uint(54).div(1).mul(C0.powu(3)).mul(CI);
+            uint(15).div(10).mul(C0.powu(4)) +
+            uint(15).div(10).mul(CI.powu(4)) +
+            uint(9).div(1).mul(C0.powu(2)).mul(CI.powu(2)) -
+            uint(6).div(1).mul(CI.powu(3)).mul(C0) -
+            uint(6).div(1).mul(C0.powu(3)).mul(CI);
+    }
+
+    function rho_alpha1(
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) public view returns (uint256) {
+        console.log(uint(9).div(1).mul(rho_alpha_denominator(C0, CI)));
+        return
+            uint(54).div(1).mul(z0).div(
+                uint(9).div(1).mul(rho_alpha_denominator(C0, CI))
+            );
+    }
+
+    function rho_alpha2(
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) public pure returns (int256) {
+        return
+            -int(
+                uint(81).div(1).mul(z0).mul(C0 + CI).div(
+                    uint(9).div(1).mul(rho_alpha_denominator(C0, CI))
+                )
+            );
+    }
+
+    function rho_alpha3(
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) public pure returns (uint256) {
+        return
+            uint(54).div(1).mul(z0).mul(C0).mul(CI).div(
+                uint(3).div(1).mul(rho_alpha_denominator(C0, CI))
+            );
+    }
+
+    function rho_alpha4(
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) public pure returns (int256) {
+        return
+            -int(
+                CI.powu(2).mul(z0).mul((uint(9).div(1).mul(C0))).div(
+                    rho_alpha_denominator(C0, CI)
+                )
+            ) +
+            int(
+                CI.powu(2).mul(z0).mul(uint(3).div(1).mul(CI)).div(
+                    rho_alpha_denominator(C0, CI)
+                )
+            );
     }
 }
-
-// const denominator =
-//     13.5 * C0_4
-//     - 54.0 * C0_3 * CI
-//     + 81.0 * C0_2 * CI_2
-//     - 54.0 * C0 * CI_3
-//     + 13.5 * CI_4;
