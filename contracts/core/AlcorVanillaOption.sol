@@ -203,6 +203,18 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         emit Initialize(sqrtPriceX96, tick);
     }
 
+    struct ModifyPositionParams {
+        // the address that owns the position
+        address owner;
+        // the lower and upper tick of the position
+        int24 tickLower;
+        int24 tickUpper;
+        // any change in liquidity
+        int128 liquidityDelta;
+    }
+
+    // ------------------ old ------------------
+
     function claimProtocolFees(
         address token,
         uint256 amount

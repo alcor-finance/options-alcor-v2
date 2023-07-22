@@ -1,14 +1,14 @@
 import { Decimal } from 'decimal.js'
 import { BigNumber, Wallet } from 'ethers'
 import { ethers } from 'hardhat'
-import { expect } from '../shared/expect'
+import { expect } from '../../test/shared/expect'
 
 import { TokenERC20 } from '../../typechain/TokenERC20'
 import { AlcorFactory } from '../../typechain/AlcorFactory'
 import { MockAlcorPoolCallOption } from '../../typechain/MockAlcorPoolCallOption'
 
-import { delay, tickToPrice } from '../shared/utils'
-import { formatTokenAmount } from '../shared/format'
+import { delay, tickToPrice } from '../../test/shared/utils'
+import { formatTokenAmount } from '../../test/shared/format'
 
 // import { mumbaiUSDC2, mumbaiWETH2 } from '../constants'
 
@@ -17,7 +17,7 @@ import {
     loadTokensFixture, FactoryFixture,
     createAlcorPoolCallOption,
     loadAlcorPoolCallOptionContract
-} from '../shared/fixtures'
+} from '../../test/shared/fixtures'
 
 
 Decimal.config({ toExpNeg: -500, toExpPos: 500 })
