@@ -46,13 +46,21 @@ contract TestPolynomialsLibrary {
 
     function calculate_dy_alphas(
         uint256 C,
+        uint256 C0,
         int alpha1,
         int alpha2,
         int alpha3,
         int alpha4
-    ) public view returns (int256) {
+    ) public pure returns (int256) {
         return
-            Polynomials.calculate_dy_alphas(C, alpha1, alpha2, alpha3, alpha4);
+            Polynomials.calculate_dy_alphas(
+                C,
+                C0,
+                alpha1,
+                alpha2,
+                alpha3,
+                alpha4
+            );
     }
 
     function calculate_dy(
@@ -60,7 +68,7 @@ contract TestPolynomialsLibrary {
         uint256 C0,
         uint256 CI,
         uint256 z0
-    ) public view returns (int256) {
+    ) public pure returns (int256) {
         return Polynomials.calculate_dy(C, C0, CI, z0);
     }
 }
