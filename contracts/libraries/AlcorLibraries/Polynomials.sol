@@ -85,11 +85,10 @@ library Polynomials {
         int alpha3,
         int alpha4
     ) internal pure returns (int256) {
-        int C_signed = int(C);
         return
-            alpha1.mul(C_signed.powu(4)).div(4) +
-            alpha2.mul(C_signed.powu(3)).div(3) +
-            alpha3.mul(C_signed.powu(2)).div(2) +
-            alpha4.mul(C_signed);
+            alpha1.mul(int(C).powu(4)).div(4) +
+            alpha2.mul(int(C).powu(3)).div(3) +
+            alpha3.mul(int(C).powu(2)).div(2) +
+            alpha4.mul(int(C));
     }
 }
