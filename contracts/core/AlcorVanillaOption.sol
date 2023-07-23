@@ -2,13 +2,10 @@
 pragma solidity ^0.8.18;
 pragma abicoder v2;
 
-// import "../dependencies/ReentrancyGuard.sol";
 import "./NoDelegateCall.sol";
 
 import {SafeCast} from "../libraries/SafeCast.sol";
-import {Tick} from "../libraries/Tick.sol";
 import {TickBitmap} from "../libraries/TickBitmap.sol";
-import {Position} from "../libraries/Position.sol";
 import {Oracle} from "../libraries/Oracle.sol";
 
 import {FullMath} from "../libraries/FullMath.sol";
@@ -17,6 +14,10 @@ import {TransferHelper} from "../libraries/TransferHelper.sol";
 import {TickMath} from "../libraries/TickMath.sol";
 import {SqrtPriceMath} from "../libraries/SqrtPriceMath.sol";
 import {SwapMath} from "../libraries/SwapMath.sol";
+
+// Alcor libraries
+import {Tick} from "../libraries/AlcorLibraries/AlcorTick.sol";
+import {Position} from "../libraries/AlcorLibraries/AlcorPosition.sol";
 
 import "../interfaces/IUniswapV3Pool.sol";
 import "../interfaces/IUniswapV3Factory.sol";
@@ -94,8 +95,6 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     OptionInfo public optionMainInfo;
 
-    // mapping(address => UserInfoCallOption.Info) public usersInfo;
-
     struct Slot0 {
         // the current price
         uint160 sqrtPriceX96;
@@ -113,6 +112,8 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     Slot0 public slot0;
 
+    Tick.AlphasVector public currentAlphas;
+
     /// @dev Mutually exclusive reentrancy protection into the pool to/from a method. This method also prevents entrance
     /// to a function before the pool is initialized. The reentrancy guard is required throughout the contract because
     /// we use balance checks to determine the payment status of interactions such as mint, swap and flash.
@@ -122,10 +123,6 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         _;
         slot0.unlocked = true;
     }
-
-    // constructor() {
-    //     // protocolFee = 250; // 0.025%
-    // }
 
     /// @dev Prevents calling a function from anyone except the address returned by IAlcorFactory#owner()
     modifier onlyFactoryOwner() {
@@ -143,7 +140,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     }
 
     /// @dev Common checks for valid tick inputs.
-    function checkTicks(int24 tickLower, int24 tickUpper) private pure {
+    function checkTicks(int24 tickLower, int24 tickUpper) internal pure {
         if (tickLower >= tickUpper) revert TLU();
         if (tickLower < TickMath.MIN_TICK) revert TLM();
         if (tickUpper > TickMath.MAX_TICK) revert TUM();
@@ -157,7 +154,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     /// @dev Get the pool's balance of token0
     /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
     /// check
-    function balance0() private view returns (uint256) {
+    function balance0() internal view returns (uint256) {
         (bool success, bytes memory data) = token0.staticcall(
             abi.encodeWithSelector(
                 IERC20Minimal.balanceOf.selector,
@@ -171,7 +168,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     /// @dev Get the pool's balance of token1
     /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
     /// check
-    function balance1() private view returns (uint256) {
+    function balance1() internal view returns (uint256) {
         (bool success, bytes memory data) = token1.staticcall(
             abi.encodeWithSelector(
                 IERC20Minimal.balanceOf.selector,
@@ -207,10 +204,11 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         // the address that owns the position
         address owner;
         // the lower and upper tick of the position
-        int24 tickLower;
+        // int24 tickLower;
         int24 tickUpper;
         // any change in liquidity
-        int128 liquidityDelta;
+        // int128 liquidityDelta;
+        Tick.AlphasVector alphasDelta;
     }
 
     // ------------------ old ------------------
