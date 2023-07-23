@@ -229,21 +229,29 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                 _feeGrowthGlobal1X128
             );
 
-        // position.update(
-        //     liquidityDelta,
-        //     feeGrowthInside0X128,
-        //     feeGrowthInside1X128
-        // );
+        position.update(
+            alphasDelta,
+            feeGrowthInside0X128,
+            feeGrowthInside1X128
+        );
 
-        // // clear any tick data that is no longer needed
-        // if (liquidityDelta < 0) {
-        //     if (flippedLower) {
-        //         ticks.clear(tickLower);
-        //     }
-        //     if (flippedUpper) {
-        //         ticks.clear(tickUpper);
-        //     }
-        // }
+        // clear any tick data that is no longer needed
+        if (
+            alphasDelta.alpha1 < 0 &&
+            alphasDelta.alpha2 < 0 &&
+            alphasDelta.alpha3 < 0 &&
+            alphasDelta.alpha4 < 0
+        ) {
+            if (flippedLower) {
+                ticks.clear(tickLower);
+            }
+            if (flippedMiddle) {
+                ticks.clear(tick);
+            }
+            if (flippedUpper) {
+                ticks.clear(tickUpper);
+            }
+        }
     }
 
     // the top level state of the swap, the results of which are recorded in storage at the end
