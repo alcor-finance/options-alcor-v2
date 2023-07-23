@@ -91,4 +91,18 @@ library Polynomials {
             alpha3.mul(int(C).powu(2)).div(2) +
             alpha4.mul(int(C));
     }
+
+    function calculate_dx(
+        uint256 C,
+        int alpha1,
+        int alpha2,
+        int alpha3,
+        int alpha4
+    ) internal pure returns (int256) {
+        return
+            alpha1.mul(int(C).powu(5)).div(5) +
+            alpha2.mul(int(C).powu(4)).div(4) +
+            alpha3.mul(int(C).powu(3)).div(3) +
+            alpha4.mul(int(C).powu(2)).div(2);
+    }
 }
