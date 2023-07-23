@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.18;
 
 import "../../dependencies/prb-math/contracts/PRBMathSD59x18.sol";
 
@@ -16,13 +16,13 @@ library Statistics {
     int internal constant SQRT_2 = 1414213562373095100;
 
     // @dev cumulative distribution function
-    function cdf(int x) public pure returns (int y) {
+    function cdf(int x) internal pure returns (int y) {
         y = (erf(x.div(SQRT_2)) + 1e18).div(2e18);
         return y;
     }
 
     // @dev error function
-    function erf(int x) public pure returns (int y) {
+    function erf(int x) internal pure returns (int y) {
         // save the sign
         int sign = 1;
         if (x < 0) {

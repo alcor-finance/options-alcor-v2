@@ -78,31 +78,52 @@ library Polynomials {
             );
     }
 
-    function calculate_dy(
+    function calculate_dy_alphas(
         uint256 C,
+        uint256 C0,
         int alpha1,
         int alpha2,
         int alpha3,
         int alpha4
     ) internal pure returns (int256) {
         return
-            alpha1.mul(int(C).powu(4)).div(4) +
-            alpha2.mul(int(C).powu(3)).div(3) +
-            alpha3.mul(int(C).powu(2)).div(2) +
-            alpha4.mul(int(C));
+            alpha1.mul(int(C.powu(4) - C0.powu(4))).div(4 ether) +
+            alpha2.mul(int(C.powu(3) - C0.powu(3))).div(3 ether) +
+            alpha3.mul(int(C.powu(2) - C0.powu(2))).div(2 ether) +
+            alpha4.mul(int(C - C0));
+    }
+
+    function calculate_dy(
+        uint256 C,
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) internal pure returns (int256) {
+        return
+            rho_alpha1(C0, CI, z0).mul(int(C.powu(4) - C0.powu(4))).div(
+                4 ether
+            ) +
+            rho_alpha2(C0, CI, z0).mul(int(C.powu(3) - C0.powu(3))).div(
+                3 ether
+            ) +
+            rho_alpha3(C0, CI, z0).mul(int(C.powu(2) - C0.powu(2))).div(
+                2 ether
+            ) +
+            rho_alpha4(C0, CI, z0).mul(int(C - C0));
     }
 
     function calculate_dx(
         uint256 C,
+        uint256 C0,
         int alpha1,
         int alpha2,
         int alpha3,
         int alpha4
     ) internal pure returns (int256) {
         return
-            alpha1.mul(int(C).powu(5)).div(5) +
-            alpha2.mul(int(C).powu(4)).div(4) +
-            alpha3.mul(int(C).powu(3)).div(3) +
-            alpha4.mul(int(C).powu(2)).div(2);
+            alpha1.mul(int(C).powu(5) - int(C0).powu(5)).div(5 ether) +
+            alpha2.mul(int(C).powu(4) - int(C0).powu(4)).div(4 ether) +
+            alpha3.mul(int(C).powu(3) - int(C0).powu(3)).div(3 ether) +
+            alpha4.mul(int(C).powu(2) - int(C0).powu(2)).div(2);
     }
 }

@@ -44,13 +44,23 @@ contract TestPolynomialsLibrary {
         return Polynomials.rho_alpha4(C0, CI, z0);
     }
 
-    function calculate_dy(
+    function calculate_dy_alphas(
         uint256 C,
         int alpha1,
         int alpha2,
         int alpha3,
         int alpha4
-    ) public pure returns (int256) {
-        return Polynomials.calculate_dy(C, alpha1, alpha2, alpha3, alpha4);
+    ) public view returns (int256) {
+        return
+            Polynomials.calculate_dy_alphas(C, alpha1, alpha2, alpha3, alpha4);
+    }
+
+    function calculate_dy(
+        uint256 C,
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) public view returns (int256) {
+        return Polynomials.calculate_dy(C, C0, CI, z0);
     }
 }
