@@ -9,7 +9,7 @@ describe('PolynomialLibrary', () => {
     const scale = ethers.BigNumber.from(10).pow(8)
 
     beforeEach(async () => {
-        const Polynomial = await ethers.getContractFactory('Polynomials')
+        const Polynomial = await ethers.getContractFactory('TestPolynomialsLibrary')
         polynomial = await Polynomial.deploy()
         await polynomial.deployed()
     })

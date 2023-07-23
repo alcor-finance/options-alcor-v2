@@ -25,11 +25,12 @@ library Polynomials {
         uint256 C0,
         uint256 CI,
         uint256 z0
-    ) public view returns (uint256) {
-        console.log(uint(9).div(1).mul(rho_alpha_denominator(C0, CI)));
+    ) internal pure returns (int256) {
         return
-            uint(54).div(1).mul(z0).div(
-                uint(9).div(1).mul(rho_alpha_denominator(C0, CI))
+            int(
+                uint(54).div(1).mul(z0).div(
+                    uint(9).div(1).mul(rho_alpha_denominator(C0, CI))
+                )
             );
     }
 
@@ -37,7 +38,7 @@ library Polynomials {
         uint256 C0,
         uint256 CI,
         uint256 z0
-    ) public pure returns (int256) {
+    ) internal pure returns (int256) {
         return
             -int(
                 uint(81).div(1).mul(z0).mul(C0 + CI).div(
@@ -50,10 +51,12 @@ library Polynomials {
         uint256 C0,
         uint256 CI,
         uint256 z0
-    ) public pure returns (uint256) {
+    ) internal pure returns (int256) {
         return
-            uint(54).div(1).mul(z0).mul(C0).mul(CI).div(
-                uint(3).div(1).mul(rho_alpha_denominator(C0, CI))
+            int(
+                uint(54).div(1).mul(z0).mul(C0).mul(CI).div(
+                    uint(3).div(1).mul(rho_alpha_denominator(C0, CI))
+                )
             );
     }
 
@@ -61,7 +64,7 @@ library Polynomials {
         uint256 C0,
         uint256 CI,
         uint256 z0
-    ) public pure returns (int256) {
+    ) internal pure returns (int256) {
         return
             -int(
                 CI.powu(2).mul(z0).mul((uint(9).div(1).mul(C0))).div(
@@ -73,5 +76,20 @@ library Polynomials {
                     rho_alpha_denominator(C0, CI)
                 )
             );
+    }
+
+    function calculate_dy(
+        uint256 C,
+        int alpha1,
+        int alpha2,
+        int alpha3,
+        int alpha4
+    ) internal pure returns (int256) {
+        int C_signed = int(C);
+        return
+            alpha1.mul(C_signed.powu(4)).div(4) +
+            alpha2.mul(C_signed.powu(3)).div(3) +
+            alpha3.mul(C_signed.powu(2)).div(2) +
+            alpha4.mul(C_signed);
     }
 }
