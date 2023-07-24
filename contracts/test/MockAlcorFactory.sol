@@ -14,7 +14,7 @@ contract MockAlcorFactory is AlcorFactory {
         address token0,
         address token1,
         uint256 optionExpiration,
-        uint8 poolFee,
+        uint32 poolFee,
         uint160 optionStrikePriceX96,
         int24 tickSpacing
     ) internal override returns (address pool) {
@@ -45,7 +45,7 @@ contract MockAlcorFactory is AlcorFactory {
     function createPoolCallOption(
         address tokenA,
         address tokenB,
-        uint8 poolFee,
+        uint32 poolFee,
         // bool isCall,
         uint256 optionExpiration,
         uint160 optionStrikePriceX96

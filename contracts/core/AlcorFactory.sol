@@ -76,7 +76,7 @@ contract AlcorFactory is IAlcorFactory, AlcorPoolDeployer, NoDelegateCall {
     function createPoolCallOption(
         address tokenA,
         address tokenB,
-        uint8 poolFee,
+        uint32 poolFee,
         uint256 optionExpiration,
         uint160 optionStrikePriceX96
     ) external virtual noDelegateCall returns (address pool) {

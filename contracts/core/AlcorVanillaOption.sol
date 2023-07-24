@@ -89,7 +89,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         bool isCallOption;
         bool isExpired;
         uint160 sqrtPriceAtExpiryX96;
-        uint256 poolFee;
+        uint32 poolFee;
         // the current protocol fee as a percentage of the swap fee taken on withdrawal
         // represented as an integer denominator (1/x)%
         uint256 feeProtocol;

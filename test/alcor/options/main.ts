@@ -40,7 +40,7 @@ let alcorOption: AlcorPoolCallOption;
 
 const OPTION_STRIKE_PRICE = BigNumber.from(100);
 const OPTION_EXPIRATION = BigNumber.from(1728014465); // 2025-01-01
-const POOL_FEE = 50;
+const POOL_FEE = 500;
 
 
 
@@ -51,8 +51,6 @@ describe("AlcorOption mint", function () {
     let accountsLength: number = 3
     let account1: Wallet, account2: Wallet, account3: Wallet
     let token0Addr: string, token1Addr: string
-    // token0Addr = mumbaiUSDC2
-    // token1Addr = mumbaiWETH2
 
     let factory: AlcorFactory
     let mock_alcor_pool_call_option_address: string
@@ -70,7 +68,6 @@ describe("AlcorOption mint", function () {
         let [token0, token1] = await loadTokensFixture(token0Addr, token1Addr, deployer)
         console.log("token0:", token0.address)
         console.log("token1:", token1.address)
-        // })
 
         // Deploy AlcorFactory
         const AlcorFactory = await ethers.getContractFactory("MockAlcorFactory");
@@ -103,10 +100,6 @@ describe("AlcorOption mint", function () {
 
     it('should initialize AlcorOption', async function () {
         let init_price = '123123123123';
-        // console.log("init_price:", init_price.toString())
-        // let init_price = new bn(0.01)
-        // const init_sqrtPriceX96 = priceToSqrtPriceX96(init_price);
-        // console.log(init_sqrtPriceX96.toString())
         await alcorOption.connect(account1).initialize(init_price);
     })
 
@@ -116,7 +109,6 @@ describe("AlcorOption mint", function () {
 
 
         before("approve tokens to alcor pool contract", async () => {
-            // let accounts = [account1, account2, account3]
             let [token0, token1] = await loadTokensFixture(token0Addr, token1Addr, account1)
 
             let tx0 = await token0.approve(mock_alcor_pool_call_option_address, BigNumber.from(2).pow(150).toString())
@@ -128,7 +120,7 @@ describe("AlcorOption mint", function () {
 
         // Mint options
         console.log(await alcorOption.connect(account1).mint(tickUpper, Z0))
-            // .to.emit(alcorOption, "Mint")
-            // .withArgs(await account1.getAddress(), alcorOption.slot0.tick, alcorOption.tickUpper, Z0);
+        // .to.emit(alcorOption, "Mint")
+        // .withArgs(await account1.getAddress(), alcorOption.slot0.tick, alcorOption.tickUpper, Z0);
     });
 });

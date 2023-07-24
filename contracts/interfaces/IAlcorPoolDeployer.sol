@@ -22,7 +22,7 @@ interface IAlcorPoolDeployer {
             address token1,
             uint256 expiration,
             uint160 strikePrice,
-            uint8 fee,
+            uint32 poolFee,
             int24 tickSpacing
         );
 }
