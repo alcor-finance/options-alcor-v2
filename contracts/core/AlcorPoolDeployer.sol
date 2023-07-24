@@ -51,7 +51,6 @@ contract AlcorPoolDeployer is IAlcorPoolDeployer {
             tickSpacing: tickSpacing
         });
 
-        // TODO: CHANGE IT BACK TO AlcorPool
         pool = address(
             new AlcorPoolCallOption{
                 salt: keccak256(

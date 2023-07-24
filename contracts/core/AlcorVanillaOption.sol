@@ -18,6 +18,8 @@ import {SwapMath} from "../libraries/SwapMath.sol";
 // Alcor libraries
 import {Tick} from "../libraries/AlcorLibraries/AlcorTick.sol";
 import {Position} from "../libraries/AlcorLibraries/AlcorPosition.sol";
+import {Polynomials} from "../libraries/AlcorLibraries/Polynomials.sol";
+import {TickLibrary} from "../libraries/AlcorLibraries/TickLibrary.sol";
 
 import "../interfaces/IUniswapV3Pool.sol";
 import "../interfaces/IUniswapV3Factory.sol";
@@ -87,10 +89,10 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         bool isCallOption;
         bool isExpired;
         uint160 sqrtPriceAtExpiryX96;
-        uint8 poolFee;
+        uint256 poolFee;
         // the current protocol fee as a percentage of the swap fee taken on withdrawal
         // represented as an integer denominator (1/x)%
-        uint8 feeProtocol;
+        uint256 feeProtocol;
     }
 
     OptionInfo public optionMainInfo;

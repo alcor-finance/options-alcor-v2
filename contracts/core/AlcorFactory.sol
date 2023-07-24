@@ -88,6 +88,9 @@ contract AlcorFactory is IAlcorFactory, AlcorPoolDeployer, NoDelegateCall {
 
         // int24 tickSpacing = feeAmountTickSpacing[fee];
 
+        console.log(poolFee);
+        console.log("----");
+
         bool isCall = true;
 
         int24 tickSpacing = 10;

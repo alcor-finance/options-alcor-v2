@@ -51,10 +51,16 @@ export const createAlcorPoolCallOption = async (
     factory: AlcorFactory,
     token0: TokenERC20,
     token1: TokenERC20,
+    poolFee: number,
     optionExpiration: string | BigNumber,
     optionStrikePrice: string | BigNumber
 ) => {
-    const create = await factory.createPoolCallOption(token0.address, token1.address, optionExpiration, optionStrikePrice)
+    const create = await factory.createPoolCallOption(
+        token0.address,
+        token1.address,
+        poolFee,
+        optionExpiration,
+        optionStrikePrice)
     const receipt = await create.wait()
 
     let alcor_pool_address = receipt.events?.[0].args?.pool as string

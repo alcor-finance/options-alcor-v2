@@ -46,6 +46,7 @@ contract MockAlcorFactory is AlcorFactory {
         address tokenA,
         address tokenB,
         uint8 poolFee,
+        // bool isCall,
         uint256 optionExpiration,
         uint160 optionStrikePriceX96
     ) external override noDelegateCall returns (address pool) {

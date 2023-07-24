@@ -21,6 +21,17 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
 
     uint256 public feeGrowthGlobal1X128;
 
+    error M0();
+    error M1();
+
+    event Mint(
+        address indexed sender,
+        // address indexed recipient,
+        int24 indexed tickLower,
+        int24 indexed tickUpper,
+        uint256 amount
+    );
+
     constructor() {
         // int24 _tickSpacing;
         (
@@ -46,7 +57,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
     /// @param params the position details and the change to the position's liquidity to effect
     /// @return position a storage pointer referencing the position with the given owner and tick range
     /// @return amount0 the amount of token0 owed to the pool, negative if the pool should pay the recipient
-    /// @return amount1 the amount of token1 owed to the pool, negative if the pool should pay the recipient
+    // /// @return amount1 the amount of token1 owed to the pool, negative if the pool should pay the recipient
     // function _modifyPosition(
     //     ModifyPositionParams memory params
     // )
@@ -132,8 +143,6 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         int24 tickLower;
         if ((2 * tick - tickUpper) > 0) {
             (2 * tick - tickUpper);
-        } else {
-            0;
         }
 
         // here we use the current tick as the lower tick
@@ -218,6 +227,10 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
             if (flippedUpper) {
                 tickBitmap.flipTick(tickUpper, tickSpacing);
             }
+
+            console.logInt(
+                position.positionAlphas.alpha1
+            );
         }
 
         (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) = ticks
@@ -252,6 +265,45 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                 ticks.clear(tickUpper);
             }
         }
+    }
+
+    function mint(
+        // address recipient,
+        // int24 tickLower,
+        int24 tickUpper,
+        uint256 z0
+    ) external lock noDelegateCall returns (bool success) {
+        require(z0 > 0, "z0 is zero");
+        // require(tickLower < tickUpper, "tickLower >= tickUpper");
+
+        int24 tickLower = slot0.tick;
+
+        uint256 C0 = TickLibrary.getPriceAtTick(tickLower);
+        uint256 CI = TickLibrary.getPriceAtTick(tickUpper);
+        console.log("CI: ", CI);
+
+        (
+            int256 alpha1,
+            int256 alpha2,
+            int256 alpha3,
+            int256 alpha4
+        ) = Polynomials.calculate_alphas(C0, CI, z0);
+
+        _updatePosition(
+            msg.sender,
+            tickUpper,
+            Tick.AlphasVector({
+                alpha1: alpha1,
+                alpha2: alpha2,
+                alpha3: alpha3,
+                alpha4: alpha4
+            }),
+            slot0.tick
+        );
+
+        success = true;
+
+        emit Mint(msg.sender, tickLower, tickUpper, z0);
     }
 
     // the top level state of the swap, the results of which are recorded in storage at the end

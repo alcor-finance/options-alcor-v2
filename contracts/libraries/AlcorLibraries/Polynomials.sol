@@ -78,6 +78,18 @@ library Polynomials {
             );
     }
 
+    function calculate_alphas(
+        uint256 C0,
+        uint256 CI,
+        uint256 z0
+    ) internal pure returns (int256, int256, int256, int256) {
+        int256 alpha1 = rho_alpha1(C0, CI, z0);
+        int256 alpha2 = rho_alpha2(C0, CI, z0);
+        int256 alpha3 = rho_alpha3(C0, CI, z0);
+        int256 alpha4 = rho_alpha4(C0, CI, z0);
+        return (alpha1, alpha2, alpha3, alpha4);
+    }
+
     function calculate_dy_alphas(
         uint256 C,
         uint256 C0,
