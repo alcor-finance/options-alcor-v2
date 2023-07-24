@@ -1,0 +1,9 @@
+artifacts/
+cache/
+crytic-export/
+node_modules/
+typechain/
+.env
+.vscode/
+.DS_Store
+contracts-dbg
