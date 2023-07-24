@@ -1,4 +1,5 @@
-# Alcor Finance Contracts
+# Alcor Finance Automated Market Maker
 
+All the contracts are currently under active development.
 
-[![Tests](https://github.com/alcor-finance/uniswap-based-options/actions/workflows/tests.yml/badge.svg)](https://github.com/alcor-finance/uniswap-based-options/actions/workflows/tests.yml)
+Currently the code has no license (SPDX License: None).
