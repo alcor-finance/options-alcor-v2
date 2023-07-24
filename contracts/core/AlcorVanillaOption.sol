@@ -92,7 +92,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         uint32 poolFee;
         // the current protocol fee as a percentage of the swap fee taken on withdrawal
         // represented as an integer denominator (1/x)%
-        uint256 feeProtocol;
+        uint8 feeProtocol;
     }
 
     OptionInfo public optionMainInfo;

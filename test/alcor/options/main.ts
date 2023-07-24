@@ -44,13 +44,13 @@ const POOL_FEE = 500;
 
 
 
-let token0: Contract,   // USDC
-    token1: Contract    // WETH
+
 
 describe("AlcorOption mint", function () {
     let accountsLength: number = 3
     let account1: Wallet, account2: Wallet, account3: Wallet
     let token0Addr: string, token1Addr: string
+
 
     let factory: AlcorFactory
     let mock_alcor_pool_call_option_address: string
@@ -62,7 +62,6 @@ describe("AlcorOption mint", function () {
         console.log(account1.address, account2.address, account3.address)
     })
     before('deploy tokens', async function () {
-
         let [token0Addr, token1Addr] = await deployTokensFixture()
         let deployer: Wallet = account1
         let [token0, token1] = await loadTokensFixture(token0Addr, token1Addr, deployer)
