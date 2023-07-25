@@ -8,6 +8,7 @@ import "../libraries/TransferHelper.sol";
 
 import "./AlcorVanillaOption.sol";
 
+
 import "hardhat/console.sol";
 
 contract AlcorPoolCallOption is AlcorVanillaOption {
@@ -62,7 +63,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         address owner,
         // int24 tickLower,
         int24 tickUpper,
-        Tick.AlphasVector memory alphasDelta,
+        Polynomials.AlphasVector memory alphasDelta,
         int24 tick
     ) private returns (Position.Info storage position) {
         int24 tickLower;
@@ -115,7 +116,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
             flippedUpper = ticks.update(
                 tickUpper,
                 tick,
-                Tick.AlphasVector({
+                Polynomials.AlphasVector({
                     alpha1: -alphasDelta.alpha1,
                     alpha2: -alphasDelta.alpha2,
                     alpha3: -alphasDelta.alpha3,
@@ -131,7 +132,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
             flippedLower = ticks.update(
                 tickLower,
                 tick,
-                Tick.AlphasVector({
+                Polynomials.AlphasVector({
                     alpha1: -alphasDelta.alpha1,
                     alpha2: -alphasDelta.alpha2,
                     alpha3: -alphasDelta.alpha3,
@@ -207,7 +208,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         external
         lock
         noDelegateCall
-        returns (Tick.AlphasVector memory alphasVector)
+        returns (Polynomials.AlphasVector memory alphasVector)
     {
         require(z0 > 0, "z0 is zero");
         int24 tickLower = slot0.tick;
@@ -218,31 +219,16 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         console.log("C0: ", C0);
         console.log("CI: ", CI);
 
-        (
-            int256 alpha1,
-            int256 alpha2,
-            int256 alpha3,
-            int256 alpha4
-        ) = Polynomials.calculate_alphas(C0, CI, z0);
+        // (
+        //     int256 alpha1,
+        //     int256 alpha2,
+        //     int256 alpha3,
+        //     int256 alpha4
+        // ) = Polynomials.calculate_alphas(C0, CI, z0);
 
-        alphasVector = Tick.AlphasVector({
-            alpha1: alpha1,
-            alpha2: alpha2,
-            alpha3: alpha3,
-            alpha4: alpha4
-        });
+        alphasVector = Polynomials.calculate_alphas(C0, CI, z0);
 
-        _updatePosition(
-            msg.sender,
-            tickUpper,
-            Tick.AlphasVector({
-                alpha1: alpha1,
-                alpha2: alpha2,
-                alpha3: alpha3,
-                alpha4: alpha4
-            }),
-            slot0.tick
-        );
+        _updatePosition(msg.sender, tickUpper, alphasVector, slot0.tick);
 
         emit Mint(msg.sender, tickLower, tickUpper, z0);
     }
@@ -277,7 +263,9 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         // the protocol fee for the input token
         uint8 feeProtocol;
         // liquidity at the beginning of the swap
-        uint128 liquidityStart;
+        // uint128 liquidityStart;
+        // uint256 densityStart;
+        Polynomials.AlphasVector alphasStart;
         // the timestamp of the current block
         uint32 blockTimestamp;
         // the current value of the tick accumulator, computed only if we cross an initialized tick
@@ -295,26 +283,26 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         // the amount already swapped out/in of the output/input asset
         int256 amountCalculated;
         // current sqrt(price)
-        uint160 sqrtPriceX96;
+        // uint160 sqrtPriceX96;
         // the tick associated with the current price
         int24 tick;
         // the global fee growth of the input token
         uint256 feeGrowthGlobalX128;
         // amount of input token paid as protocol fee
         uint128 protocolFee;
-        // the current liquidity in range
-        uint128 liquidity;
+        // the current density in range
+        Polynomials.AlphasVector alphasState;
     }
 
     struct StepComputations {
         // the price at the beginning of the step
-        uint160 sqrtPriceStartX96;
+        // uint160 sqrtPriceStartX96;
         // the next tick to swap to from the current tick in the swap direction
         int24 tickNext;
         // whether tickNext is initialized or not
         bool initialized;
         // sqrt(price) for the next tick (1/0)
-        uint160 sqrtPriceNextX96;
+        // uint160 sqrtPriceNextX96;
         // how much is being swapped in in this step
         uint256 amountIn;
         // how much is being swapped out
@@ -323,124 +311,136 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         uint256 feeAmount;
     }
 
-    // function buyOption(
-    //     uint256 amountSpecified,
-    //     uint256 maxCost,
-    //     uint160 sqrtPriceLimitX96
-    // ) external lock returns (uint256 cost) {
-    //     if (amountSpecified == 0) revert AS();
-    //     Slot0 memory slot0Start = slot0;
+    function buyOption(
+        uint256 amountSpecified,
+        uint256 maxCost,
+        int24 tickLimit
+    ) external lock returns (uint256 cost) {
+        if (amountSpecified == 0) revert AS();
+        Slot0 memory slot0Start = slot0;
 
-    //     if (!slot0Start.unlocked) revert LOK();
+        if (!slot0Start.unlocked) revert LOK();
 
-    //     bool zeroForOne = true; // true if buying option
-    //     bool exactInput = true; // always true as amount is uint256
+        bool zeroForOne = true; // true if buying option
 
-    //     require(
-    //         sqrtPriceLimitX96 < slot0Start.sqrtPriceX96 &&
-    //             sqrtPriceLimitX96 > TickMath.MIN_SQRT_RATIO,
-    //         "SPL"
-    //     );
-    //     slot0.unlocked = false;
+        // require(
+        //     sqrtPriceLimitX96 < slot0Start.sqrtPriceX96 &&
+        //         sqrtPriceLimitX96 > TickMath.MIN_SQRT_RATIO,
+        //     "SPL"
+        // );
+        slot0.unlocked = false;
 
-    //     SwapCache memory cache = SwapCache({
-    //         liquidityStart: liquidity,
-    //         blockTimestamp: _blockTimestamp(),
-    //         feeProtocol: (optionMainInfo.feeProtocol % 16),
-    //         secondsPerLiquidityCumulativeX128: 0,
-    //         tickCumulative: 0,
-    //         computedLatestObservation: false
-    //     });
+        // currentAlphas
 
-    //     SwapState memory state = SwapState({
-    //         amountSpecifiedRemaining: int256(amountSpecified),
-    //         amountCalculated: 0,
-    //         sqrtPriceX96: slot0Start.sqrtPriceX96,
-    //         tick: slot0Start.tick,
-    //         feeGrowthGlobalX128: feeGrowthGlobal1X128,
-    //         protocolFee: 0,
-    //         liquidity: cache.liquidityStart
-    //     });
+        SwapCache memory cache = SwapCache({
+            // liquidityStart: liquidity,
+            alphasStart: currentAlphas,
+            blockTimestamp: _blockTimestamp(),
+            feeProtocol: (optionMainInfo.feeProtocol % 16),
+            secondsPerLiquidityCumulativeX128: 0,
+            tickCumulative: 0,
+            computedLatestObservation: false
+        });
 
-    //     while (
-    //         state.amountSpecifiedRemaining != 0 &&
-    //         state.sqrtPriceX96 != sqrtPriceLimitX96
-    //     ) {
-    //         StepComputations memory step;
+        SwapState memory state = SwapState({
+            amountSpecifiedRemaining: int256(amountSpecified),
+            amountCalculated: 0,
+            // sqrtPriceX96: slot0Start.sqrtPriceX96,
+            tick: slot0Start.tick,
+            feeGrowthGlobalX128: feeGrowthGlobal1X128,
+            protocolFee: 0,
+            alphasState: cache.alphasStart
+            // density: cache.densityStart
+        });
 
-    //         step.sqrtPriceStartX96 = state.sqrtPriceX96;
+        // while (
+        //     state.amountSpecifiedRemaining != 0 && state.tick != tickLimit
+        //     // state.sqrtPriceX96 != sqrtPriceLimitX96
+        // ) {
+        //     StepComputations memory step;
 
-    //         (step.tickNext, step.initialized) = tickBitmap
-    //             .nextInitializedTickWithinOneWord(
-    //                 state.tick,
-    //                 tickSpacing,
-    //                 zeroForOne // zeroForOne. true if buying option
-    //             );
+        //     // step.sqrtPriceStartX96 = state.sqrtPriceX96;
 
-    //         // ensure that we do not overshoot the min/max tick, as the tick bitmap is not aware of these bounds
-    //         if (step.tickNext < TickMath.MIN_TICK) {
-    //             step.tickNext = TickMath.MIN_TICK;
-    //         } else if (step.tickNext > TickMath.MAX_TICK) {
-    //             step.tickNext = TickMath.MAX_TICK;
-    //         }
+        //     (step.tickNext, step.initialized) = tickBitmap
+        //         .nextInitializedTickWithinOneWord(
+        //             state.tick,
+        //             tickSpacing,
+        //             zeroForOne // zeroForOne. true if buying option
+        //         );
 
-    //         // get the price for the next tick
-    //         step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
+        //     // ensure that we do not overshoot the min/max tick, as the tick bitmap is not aware of these bounds
+        //     if (step.tickNext < TickMath.MIN_TICK) {
+        //         step.tickNext = TickMath.MIN_TICK;
+        //     } else if (step.tickNext > TickMath.MAX_TICK) {
+        //         step.tickNext = TickMath.MAX_TICK;
+        //     }
 
-    //         // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
-    //         (
-    //             state.sqrtPriceX96,
-    //             step.amountIn,
-    //             step.amountOut,
-    //             step.feeAmount
-    //         ) = SwapMath.computeSwapStep(
-    //             state.sqrtPriceX96,
-    //             (
-    //                 zeroForOne
-    //                     ? step.sqrtPriceNextX96 < sqrtPriceLimitX96
-    //                     : step.sqrtPriceNextX96 > sqrtPriceLimitX96
-    //             )
-    //                 ? sqrtPriceLimitX96
-    //                 : step.sqrtPriceNextX96,
-    //             state.liquidity,
-    //             state.amountSpecifiedRemaining,
-    //             fee
-    //         );
+        //     // get the price for the next tick
+        //     // step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
-    //         if (exactInput) {
-    //             // safe because we test that amountSpecified > amountIn + feeAmount in SwapMath
-    //             unchecked {
-    //                 state.amountSpecifiedRemaining -= (step.amountIn +
-    //                     step.feeAmount).toInt256();
-    //             }
-    //             state.amountCalculated -= step.amountOut.toInt256();
-    //         } else {
-    //             unchecked {
-    //                 state.amountSpecifiedRemaining += step.amountOut.toInt256();
-    //             }
-    //             state.amountCalculated += (step.amountIn + step.feeAmount)
-    //                 .toInt256();
-    //         }
+        //     (step.amountIn, step.amountOut, step.feeAmount) = SwapMath
+        //         .computeSwapStep(
+        //             state.tick,
+        //             tickLimit,
+        //             alphasVector,
+        //             state.amountSpecifiedRemaining,
+        //             fee
+        //         );
 
-    //         // if the protocol fee is on, calculate how much is owed, decrement feeAmount, and increment protocolFee
-    //         if (cache.feeProtocol > 0) {
-    //             unchecked {
-    //                 uint256 delta = step.feeAmount / cache.feeProtocol;
-    //                 step.feeAmount -= delta;
-    //                 state.protocolFee += uint128(delta);
-    //             }
-    //         }
+        //     // // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
+        //     // (
+        //     //     state.sqrtPriceX96,
+        //     //     step.amountIn,
+        //     //     step.amountOut,
+        //     //     step.feeAmount
+        //     // ) = SwapMath.computeSwapStep(
+        //     //     state.sqrtPriceX96,
+        //     //     (
+        //     //         zeroForOne
+        //     //             ? step.sqrtPriceNextX96 < sqrtPriceLimitX96
+        //     //             : step.sqrtPriceNextX96 > sqrtPriceLimitX96
+        //     //     )
+        //     //         ? sqrtPriceLimitX96
+        //     //         : step.sqrtPriceNextX96,
+        //     //     state.liquidity,
+        //     //     state.amountSpecifiedRemaining,
+        //     //     fee
+        //     // );
 
-    //         // update global fee tracker
-    //         if (state.liquidity > 0) {
-    //             unchecked {
-    //                 state.feeGrowthGlobalX128 += FullMath.mulDiv(
-    //                     step.feeAmount,
-    //                     FixedPoint128.Q128,
-    //                     state.liquidity
-    //                 );
-    //             }
-    //         }
-    //     }
-    // }
+        //     if (exactInput) {
+        //         // safe because we test that amountSpecified > amountIn + feeAmount in SwapMath
+        //         unchecked {
+        //             state.amountSpecifiedRemaining -= (step.amountIn +
+        //                 step.feeAmount).toInt256();
+        //         }
+        //         state.amountCalculated -= step.amountOut.toInt256();
+        //     } else {
+        //         unchecked {
+        //             state.amountSpecifiedRemaining += step.amountOut.toInt256();
+        //         }
+        //         state.amountCalculated += (step.amountIn + step.feeAmount)
+        //             .toInt256();
+        //     }
+
+        //     // if the protocol fee is on, calculate how much is owed, decrement feeAmount, and increment protocolFee
+        //     if (cache.feeProtocol > 0) {
+        //         unchecked {
+        //             uint256 delta = step.feeAmount / cache.feeProtocol;
+        //             step.feeAmount -= delta;
+        //             state.protocolFee += uint128(delta);
+        //         }
+        //     }
+
+        //     // update global fee tracker
+        //     if (state.liquidity > 0) {
+        //         unchecked {
+        //             state.feeGrowthGlobalX128 += FullMath.mulDiv(
+        //                 step.feeAmount,
+        //                 FixedPoint128.Q128,
+        //                 state.liquidity
+        //             );
+        //         }
+        //     }
+        // }
+    }
 }

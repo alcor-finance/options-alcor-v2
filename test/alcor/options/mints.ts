@@ -38,8 +38,8 @@ let tokenB: Contract;
 let alcorFactory: Contract;
 let alcorOption: AlcorPoolCallOption;
 
-const OPTION_STRIKE_PRICE = BigNumber.from(100);
-const OPTION_EXPIRATION = BigNumber.from(1728014465); // 2025-01-01
+const OPTION_STRIKE_PRICE = BigNumber.from(2000);
+const OPTION_EXPIRATION = "1695978000";
 const POOL_FEE = 500;
 
 

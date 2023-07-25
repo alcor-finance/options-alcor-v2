@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 import {FullMath} from "../FullMath.sol";
 import {FixedPoint128} from "../FixedPoint128.sol";
 
-import {Tick} from "./AlcorTick.sol";
+// import {Tick} from "./AlcorTick.sol";
+
+import {Polynomials} from "./Polynomials.sol";
 
 /// @title Position
 /// @notice Positions represent an owner address' liquidity between a lower and upper tick boundary
@@ -15,7 +17,7 @@ library Position {
     // info stored for each user's position
     struct Info {
         // the amount of liquidity owned by this position
-        Tick.AlphasVector positionAlphas;
+        Polynomials.AlphasVector positionAlphas;
         // fee growth per unit of liquidity as of the last update to liquidity or fees owed
         uint256 feeGrowthInside0LastX128;
         uint256 feeGrowthInside1LastX128;
@@ -47,7 +49,7 @@ library Position {
     /// @param feeGrowthInside1X128 The all-time fee growth in token1, per unit of liquidity, inside the position's tick boundaries
     function update(
         Info storage self,
-        Tick.AlphasVector memory alphasDelta,
+        Polynomials.AlphasVector memory alphasDelta,
         uint256 feeGrowthInside0X128,
         uint256 feeGrowthInside1X128
     ) internal {
@@ -63,7 +65,7 @@ library Position {
             // if (_self.liquidity <= 0) revert NP(); // disallow pokes for 0 liquidity positions
             // liquidityNext = _self.liquidity;
         } else {
-            self.positionAlphas = Tick.addAlphasVectors(
+            self.positionAlphas = Polynomials.addAlphasVectors(
                 _self.positionAlphas,
                 alphasDelta
             );

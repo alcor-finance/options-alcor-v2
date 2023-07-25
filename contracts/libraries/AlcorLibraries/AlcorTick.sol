@@ -5,6 +5,8 @@ import {SafeCast} from "../SafeCast.sol";
 
 import {TickMath} from "../TickMath.sol";
 
+import {Polynomials} from "./Polynomials.sol";
+
 /// @title Tick
 /// @notice Contains functions for managing tick processes and relevant calculations
 library Tick {
@@ -12,18 +14,11 @@ library Tick {
 
     using SafeCast for int256;
 
-    struct AlphasVector {
-        int256 alpha1;
-        int256 alpha2;
-        int256 alpha3;
-        int256 alpha4;
-    }
-
     // info stored for each initialized individual tick
     struct Info {
         // the vector of alphas that should be added when crossing the tick in the positive direction
         // if the tick is crossed from right to left, subtract the vector instead
-        AlphasVector alphasDelta;
+        Polynomials.AlphasVector alphasDelta;
         // the total position liquidity that references this tick
         // uint128 liquidityGross;
         // amount of net liquidity added (subtracted) when tick is crossed from left to right (right to left),
@@ -60,19 +55,6 @@ library Tick {
     //         return type(uint128).max / numTicks;
     //     }
     // }
-
-    function addAlphasVectors(
-        AlphasVector memory alphas1,
-        AlphasVector memory alphas2
-    ) internal pure returns (AlphasVector memory) {
-        return
-            AlphasVector({
-                alpha1: alphas1.alpha1 + alphas2.alpha1,
-                alpha2: alphas1.alpha2 + alphas2.alpha2,
-                alpha3: alphas1.alpha3 + alphas2.alpha3,
-                alpha4: alphas1.alpha4 + alphas2.alpha4
-            });
-    }
 
     /// @notice Retrieves fee growth data
     /// @param self The mapping containing all tick information for initialized ticks
@@ -155,7 +137,7 @@ library Tick {
         mapping(int24 => Tick.Info) storage self,
         int24 tick,
         int24 tickCurrent,
-        AlphasVector memory alphasDelta,
+        Polynomials.AlphasVector memory alphasDelta,
         uint256 feeGrowthGlobal0X128,
         uint256 feeGrowthGlobal1X128,
         uint160 secondsPerLiquidityCumulativeX128,
@@ -171,11 +153,9 @@ library Tick {
     {
         Tick.Info storage info = self[tick];
 
-        AlphasVector memory alphasDeltaBefore = info.alphasDelta;
-        AlphasVector memory alphasDeltaAfter = addAlphasVectors(
-            alphasDeltaBefore,
-            alphasDelta
-        );
+        Polynomials.AlphasVector memory alphasDeltaBefore = info.alphasDelta;
+        Polynomials.AlphasVector memory alphasDeltaAfter = Polynomials
+            .addAlphasVectors(alphasDeltaBefore, alphasDelta);
 
         // if (liquidityGrossAfter > maxLiquidity) revert LO();
 

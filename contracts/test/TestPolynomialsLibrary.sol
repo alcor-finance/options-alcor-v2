@@ -47,20 +47,9 @@ contract TestPolynomialsLibrary {
     function calculate_dy_alphas(
         uint256 C,
         uint256 C0,
-        int alpha1,
-        int alpha2,
-        int alpha3,
-        int alpha4
+        Polynomials.AlphasVector memory alphasVector
     ) public pure returns (int256) {
-        return
-            Polynomials.calculate_dy_alphas(
-                C,
-                C0,
-                alpha1,
-                alpha2,
-                alpha3,
-                alpha4
-            );
+        return Polynomials.calculate_dy_alphas(C, C0, alphasVector);
     }
 
     function calculate_dy(

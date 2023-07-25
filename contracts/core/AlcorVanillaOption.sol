@@ -13,7 +13,7 @@ import {FixedPoint128} from "../libraries/FixedPoint128.sol";
 import {TransferHelper} from "../libraries/TransferHelper.sol";
 import {TickMath} from "../libraries/TickMath.sol";
 import {SqrtPriceMath} from "../libraries/SqrtPriceMath.sol";
-import {SwapMath} from "../libraries/SwapMath.sol";
+import {SwapMath} from "../libraries/AlcorLibraries/SwapMath.sol";
 
 // Alcor libraries
 import {Tick} from "../libraries/AlcorLibraries/AlcorTick.sol";
@@ -43,7 +43,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     using Position for Position.Info;
     using Oracle for Oracle.Observation[65535];
 
-    event Initialize(uint160 sqrtPriceX96, int24 tick);
+    event Initialize(int24 tick);
 
     error LOK();
     error TLU();
@@ -66,9 +66,11 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     int24 public tickSpacing;
 
-    uint128 public maxLiquidityPerTick;
+    // uint128 public maxLiquidityPerTick;
 
     // uint128 public liquidity;
+
+    uint256 public density;
 
     mapping(int24 => Tick.Info) public ticks;
     mapping(int16 => uint256) public tickBitmap;
@@ -99,7 +101,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     struct Slot0 {
         // the current price
-        uint160 sqrtPriceX96;
+        // uint160 sqrtPriceX96;
         // the current tick
         int24 tick;
         // the most-recently updated index of the observations array
@@ -114,7 +116,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     Slot0 public slot0;
 
-    Tick.AlphasVector public currentAlphas;
+    Polynomials.AlphasVector public currentAlphas;
 
     /// @dev Mutually exclusive reentrancy protection into the pool to/from a method. This method also prevents entrance
     /// to a function before the pool is initialized. The reentrancy guard is required throughout the contract because
@@ -185,7 +187,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         // if (slot0.sqrtPriceX96 != 0) revert AI();
         if (tick < TickMath.MIN_TICK || tick > TickMath.MAX_TICK) revert AI();
 
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
+        // uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
 
         // int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
@@ -194,7 +196,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         );
 
         slot0 = Slot0({
-            sqrtPriceX96: sqrtPriceX96,
+            // sqrtPriceX96: sqrtPriceX96,
             tick: tick,
             observationIndex: 0,
             observationCardinality: cardinality,
@@ -202,7 +204,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
             unlocked: true
         });
 
-        emit Initialize(sqrtPriceX96, tick);
+        emit Initialize(tick);
     }
 
     struct ModifyPositionParams {
@@ -213,7 +215,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         int24 tickUpper;
         // any change in liquidity
         // int128 liquidityDelta;
-        Tick.AlphasVector alphasDelta;
+        Polynomials.AlphasVector alphasDelta;
     }
 
     // ------------------ old ------------------
