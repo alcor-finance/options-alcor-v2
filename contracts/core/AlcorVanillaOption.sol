@@ -68,7 +68,7 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     uint128 public maxLiquidityPerTick;
 
-    uint128 public liquidity;
+    // uint128 public liquidity;
 
     mapping(int24 => Tick.Info) public ticks;
     mapping(int16 => uint256) public tickBitmap;
@@ -181,10 +181,13 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         return abi.decode(data, (uint256));
     }
 
-    function initialize(uint160 sqrtPriceX96) external {
-        if (slot0.sqrtPriceX96 != 0) revert AI();
+    function initialize(int24 tick) external {
+        // if (slot0.sqrtPriceX96 != 0) revert AI();
+        if (tick < TickMath.MIN_TICK || tick > TickMath.MAX_TICK) revert AI();
 
-        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
+
+        // int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         (uint16 cardinality, uint16 cardinalityNext) = observations.initialize(
             _blockTimestamp()

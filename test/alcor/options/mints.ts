@@ -98,12 +98,12 @@ describe("AlcorOption mint", function () {
     });
 
     it('should initialize AlcorOption', async function () {
-        let init_price = '123123123123';
-        await alcorOption.connect(account1).initialize(init_price);
+        let init_tick = -40000;
+        await alcorOption.connect(account1).initialize(init_tick);
     })
 
     it("Should mint successfully", async function () {
-        const tickUpper = -1000;
+        const tickUpper = -39000;
         const Z0 = ethers.utils.parseEther("1"); // 1 TokenA
 
 
@@ -118,7 +118,7 @@ describe("AlcorOption mint", function () {
         })
 
         // Mint options
-        console.log(await alcorOption.connect(account1).mint(tickUpper, Z0))
+        console.log(await alcorOption.connect(account1).depositForSelling(tickUpper, Z0))
         // .to.emit(alcorOption, "Mint")
         // .withArgs(await account1.getAddress(), alcorOption.slot0.tick, alcorOption.tickUpper, Z0);
     });
