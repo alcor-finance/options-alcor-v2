@@ -6,7 +6,7 @@ import * as utils from './utils'
 
 import { TestPolynomialsLibrary } from '../../../typechain'
 
-describe('PolynomialLibrary', () => {
+describe('PolynomialLibrary (Selling)', () => {
     let polynomial: Contract
     const scale = ethers.BigNumber.from(10).pow(8)
 
