@@ -12,8 +12,8 @@ import { AlcorFactory } from "../../../typechain/AlcorFactory";
 import { TokenERC20 } from '../../../typechain/TokenERC20'
 import { MockAlcorPoolCallOption } from '../../../typechain/MockAlcorPoolCallOption'
 
-import { delay, tickToPrice } from '../../../test/shared/utils'
-import { formatTokenAmount } from '../../../test/shared/format'
+import { delay, tickToPrice } from '../../shared/utils'
+import { formatTokenAmount } from '../../shared/format'
 import { priceToSqrtPriceX96, sqrtPriceX96ToPrice } from "./utils";
 
 
@@ -22,7 +22,7 @@ import {
     loadTokensFixture, FactoryFixture,
     createAlcorPoolCallOption,
     loadAlcorPoolCallOptionContract
-} from '../../../test/shared/fixtures'
+} from '../../shared/fixtures'
 import { AlcorPoolCallOption } from "../../../typechain";
 
 Decimal.config({ toExpNeg: -500, toExpPos: 500 })

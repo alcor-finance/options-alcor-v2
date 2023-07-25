@@ -4,7 +4,7 @@ import { Contract } from 'ethers'
 
 import * as utils from './utils'
 
-import { TestPolynomialsLibrary } from '../../../typechain/'
+import { TestPolynomialsLibrary } from '../../../typechain'
 
 describe('PolynomialLibrary', () => {
     let polynomial: Contract
