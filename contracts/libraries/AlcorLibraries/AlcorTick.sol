@@ -183,8 +183,6 @@ library Tick {
         int24 tick,
         int24 tickCurrent,
         Polynomials.AlphasVector memory alphasDelta,
-        // uint256 feeGrowthGlobal0X128,
-        // uint256 feeGrowthGlobal1X128,
         FeeGrowthX128 memory feeGrowthGlobalX128,
         uint160 secondsPerLiquidityCumulativeX128,
         int56 tickCumulative,

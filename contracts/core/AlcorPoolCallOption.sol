@@ -153,19 +153,15 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
             }
         }
 
-        uint256 feeGrowthInsideX128 = ticks
-            .getFeeGrowthInside(
-                tick, // tickLower,
-                tickUpper,
-                tick,
-                alphasDelta,
-                _feeGrowthGlobalX128
-            );
-
-        position.update(
+        uint256 feeGrowthInsideX128 = ticks.getFeeGrowthInside(
+            tick, // tickLower,
+            tickUpper,
+            tick,
             alphasDelta,
-            feeGrowthInsideX128
+            _feeGrowthGlobalX128
         );
+
+        position.update(alphasDelta, tick, feeGrowthInsideX128);
 
         console.log("position alpha 1:");
         console.logInt(position.positionAlphas.alpha1);
@@ -379,14 +375,20 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
             // get the price for the next tick
             // step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
-            (step.amountIn, step.amountOut, step.feeAmount) = SwapMath
-                .computeSwapStep(
-                    state.tick,
-                    tickLimit,
-                    currentAlphas,
-                    state.amountSpecifiedRemaining,
-                    fee
-                );
+            (
+                // tick which says if we end up in the same tick or not
+                // TODO: implement this logic in the library!!!
+                state.tick, 
+                step.amountIn,
+                step.amountOut,
+                step.feeAmount
+            ) = SwapMath.computeSwapStep(
+                state.tick,
+                tickLimit,
+                currentAlphas,
+                state.amountSpecifiedRemaining,
+                fee
+            );
 
             // // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
             // (
@@ -446,7 +448,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                 }
             }
 
-            // shift tick if we reached the next price
+            // // shift tick if we reached the next price
             // if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
             //     // if the tick is initialized, run the tick transition
             //     if (step.initialized) {

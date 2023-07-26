@@ -38,6 +38,7 @@ library SwapMath {
         view
         returns (
             // uint160 sqrtRatioNextX96,
+            int24 nextTick,
             uint256 amountIn,
             uint256 amountOut,
             uint256 feeAmount
@@ -52,7 +53,7 @@ library SwapMath {
         // // todo: take account if tick is not fully crossed
         // feeAmount = amountRemaining - amountRemainingLessFee;
 
-        int24 nextTick = isBuying ? tickCurrent + 1 : tickCurrent - 1;
+        // nextTick = isBuying ? tickCurrent + 1 : tickCurrent - 1;
         uint256 local_C0 = TickLibrary.getPriceAtTick(tickCurrent);
         uint256 local_CI = TickLibrary.getPriceAtTick(nextTick);
 
