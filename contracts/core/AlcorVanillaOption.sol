@@ -44,6 +44,18 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     using Oracle for Oracle.Observation[65535];
 
     event Initialize(int24 tick);
+    event CollectProtocol(
+        address indexed sender,
+        address indexed recipient,
+        uint128 amount0,
+        uint128 amount1
+    );
+    event SetFeeProtocol(
+        uint8 feeProtocol0Old,
+        uint8 feeProtocol1Old,
+        uint8 feeProtocol0New,
+        uint8 feeProtocol1New
+    );
 
     error LOK();
     error TLU();
@@ -326,5 +338,60 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
         //         optionMainInfo.payoff_token0 = (optionMainInfo.priceAtExpiry -
         //             uint256(optionMainInfo.strikePrice));
         //     }
+    }
+
+    function setFeeProtocol(
+        uint8 feeProtocol0,
+        uint8 feeProtocol1
+    ) external lock onlyFactoryOwner {
+        unchecked {
+            require(
+                (feeProtocol0 == 0 ||
+                    (feeProtocol0 >= 4 && feeProtocol0 <= 10)) &&
+                    (feeProtocol1 == 0 ||
+                        (feeProtocol1 >= 4 && feeProtocol1 <= 10))
+            );
+            uint8 feeProtocolOld = optionMainInfo.feeProtocol;
+            optionMainInfo.feeProtocol = feeProtocol0 + (feeProtocol1 << 4);
+            emit SetFeeProtocol(
+                feeProtocolOld % 16,
+                feeProtocolOld >> 4,
+                feeProtocol0,
+                feeProtocol1
+            );
+        }
+    }
+
+    function collectProtocol(
+        address recipient,
+        uint128 amount0Requested,
+        uint128 amount1Requested
+    )
+        external
+        lock
+        onlyFactoryOwner
+        returns (uint128 amount0, uint128 amount1)
+    {
+        amount0 = amount0Requested > protocolFees.token0
+            ? protocolFees.token0
+            : amount0Requested;
+        amount1 = amount1Requested > protocolFees.token1
+            ? protocolFees.token1
+            : amount1Requested;
+
+        unchecked {
+            if (amount0 > 0) {
+                if (amount0 == protocolFees.token0) amount0--; // ensure that the slot is not cleared, for gas savings
+                protocolFees.token0 -= amount0;
+                TransferHelper.safeTransfer(token0, recipient, amount0);
+            }
+            if (amount1 > 0) {
+                if (amount1 == protocolFees.token1) amount1--; // ensure that the slot is not cleared, for gas savings
+                protocolFees.token1 -= amount1;
+                TransferHelper.safeTransfer(token1, recipient, amount1);
+            }
+        }
+
+        emit CollectProtocol(msg.sender, recipient, amount0, amount1);
     }
 }

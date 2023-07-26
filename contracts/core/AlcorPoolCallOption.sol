@@ -8,7 +8,6 @@ import "../libraries/TransferHelper.sol";
 
 import "./AlcorVanillaOption.sol";
 
-
 import "hardhat/console.sol";
 
 contract AlcorPoolCallOption is AlcorVanillaOption {
@@ -263,9 +262,9 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         // the protocol fee for the input token
         uint8 feeProtocol;
         // liquidity at the beginning of the swap
-        // uint128 liquidityStart;
-        // uint256 densityStart;
         Polynomials.AlphasVector alphasStart;
+        uint256 densityStart;
+        // uint128 liquidityStart;
         // the timestamp of the current block
         uint32 blockTimestamp;
         // the current value of the tick accumulator, computed only if we cross an initialized tick
@@ -279,9 +278,9 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
     // the top level state of the swap, the results of which are recorded in storage at the end
     struct SwapState {
         // the amount remaining to be swapped in/out of the input/output asset
-        int256 amountSpecifiedRemaining;
+        uint256 amountSpecifiedRemaining;
         // the amount already swapped out/in of the output/input asset
-        int256 amountCalculated;
+        uint256 amountCalculated;
         // current sqrt(price)
         // uint160 sqrtPriceX96;
         // the tick associated with the current price
@@ -292,6 +291,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         uint128 protocolFee;
         // the current density in range
         Polynomials.AlphasVector alphasState;
+        uint256 density;
     }
 
     struct StepComputations {
@@ -321,7 +321,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
 
         if (!slot0Start.unlocked) revert LOK();
 
-        bool zeroForOne = true; // true if buying option
+        bool zeroForOne = false; // false if buying option
 
         // require(
         //     sqrtPriceLimitX96 < slot0Start.sqrtPriceX96 &&
@@ -330,11 +330,12 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         // );
         slot0.unlocked = false;
 
-        // currentAlphas
+        uint256 C0 = TickLibrary.getPriceAtTick(slot0.tick);
 
         SwapCache memory cache = SwapCache({
             // liquidityStart: liquidity,
             alphasStart: currentAlphas,
+            densityStart: Polynomials.calculate_rho(C0, currentAlphas),
             blockTimestamp: _blockTimestamp(),
             feeProtocol: (optionMainInfo.feeProtocol % 16),
             secondsPerLiquidityCumulativeX128: 0,
@@ -343,104 +344,111 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         });
 
         SwapState memory state = SwapState({
-            amountSpecifiedRemaining: int256(amountSpecified),
+            amountSpecifiedRemaining: amountSpecified,
             amountCalculated: 0,
             // sqrtPriceX96: slot0Start.sqrtPriceX96,
             tick: slot0Start.tick,
             feeGrowthGlobalX128: feeGrowthGlobal1X128,
             protocolFee: 0,
-            alphasState: cache.alphasStart
-            // density: cache.densityStart
+            alphasState: cache.alphasStart,
+            density: cache.densityStart
         });
 
-        // while (
-        //     state.amountSpecifiedRemaining != 0 && state.tick != tickLimit
-        //     // state.sqrtPriceX96 != sqrtPriceLimitX96
-        // ) {
-        //     StepComputations memory step;
+        while (
+            state.amountSpecifiedRemaining != 0 && state.tick != tickLimit
+            // state.sqrtPriceX96 != sqrtPriceLimitX96
+        ) {
+            StepComputations memory step;
 
-        //     // step.sqrtPriceStartX96 = state.sqrtPriceX96;
+            // step.sqrtPriceStartX96 = state.sqrtPriceX96;
 
-        //     (step.tickNext, step.initialized) = tickBitmap
-        //         .nextInitializedTickWithinOneWord(
-        //             state.tick,
-        //             tickSpacing,
-        //             zeroForOne // zeroForOne. true if buying option
-        //         );
+            (step.tickNext, step.initialized) = tickBitmap
+                .nextInitializedTickWithinOneWord(
+                    state.tick,
+                    tickSpacing,
+                    zeroForOne // zeroForOne. false if buying option
+                );
+            console.log("state.tick: %s");
+            console.logInt(state.tick);
+            console.log("step.tickNext: %s");
+            console.logInt(step.tickNext);
 
-        //     // ensure that we do not overshoot the min/max tick, as the tick bitmap is not aware of these bounds
-        //     if (step.tickNext < TickMath.MIN_TICK) {
-        //         step.tickNext = TickMath.MIN_TICK;
-        //     } else if (step.tickNext > TickMath.MAX_TICK) {
-        //         step.tickNext = TickMath.MAX_TICK;
-        //     }
+            // ensure that we do not overshoot the min/max tick, as the tick bitmap is not aware of these bounds
+            if (step.tickNext < TickMath.MIN_TICK) {
+                step.tickNext = TickMath.MIN_TICK;
+            } else if (step.tickNext > TickMath.MAX_TICK) {
+                step.tickNext = TickMath.MAX_TICK;
+            }
 
-        //     // get the price for the next tick
-        //     // step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
+            // get the price for the next tick
+            // step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
-        //     (step.amountIn, step.amountOut, step.feeAmount) = SwapMath
-        //         .computeSwapStep(
-        //             state.tick,
-        //             tickLimit,
-        //             alphasVector,
-        //             state.amountSpecifiedRemaining,
-        //             fee
-        //         );
+            (step.amountIn, step.amountOut, step.feeAmount) = SwapMath
+                .computeSwapStep(
+                    state.tick,
+                    tickLimit,
+                    currentAlphas,
+                    state.amountSpecifiedRemaining,
+                    fee
+                );
 
-        //     // // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
-        //     // (
-        //     //     state.sqrtPriceX96,
-        //     //     step.amountIn,
-        //     //     step.amountOut,
-        //     //     step.feeAmount
-        //     // ) = SwapMath.computeSwapStep(
-        //     //     state.sqrtPriceX96,
-        //     //     (
-        //     //         zeroForOne
-        //     //             ? step.sqrtPriceNextX96 < sqrtPriceLimitX96
-        //     //             : step.sqrtPriceNextX96 > sqrtPriceLimitX96
-        //     //     )
-        //     //         ? sqrtPriceLimitX96
-        //     //         : step.sqrtPriceNextX96,
-        //     //     state.liquidity,
-        //     //     state.amountSpecifiedRemaining,
-        //     //     fee
-        //     // );
+            // // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
+            // (
+            //     state.sqrtPriceX96,
+            //     step.amountIn,
+            //     step.amountOut,
+            //     step.feeAmount
+            // ) = SwapMath.computeSwapStep(
+            //     state.sqrtPriceX96,
+            //     (
+            //         zeroForOne
+            //             ? step.sqrtPriceNextX96 < sqrtPriceLimitX96
+            //             : step.sqrtPriceNextX96 > sqrtPriceLimitX96
+            //     )
+            //         ? sqrtPriceLimitX96
+            //         : step.sqrtPriceNextX96,
+            //     state.liquidity,
+            //     state.amountSpecifiedRemaining,
+            //     fee
+            // );
 
-        //     if (exactInput) {
-        //         // safe because we test that amountSpecified > amountIn + feeAmount in SwapMath
-        //         unchecked {
-        //             state.amountSpecifiedRemaining -= (step.amountIn +
-        //                 step.feeAmount).toInt256();
-        //         }
-        //         state.amountCalculated -= step.amountOut.toInt256();
-        //     } else {
-        //         unchecked {
-        //             state.amountSpecifiedRemaining += step.amountOut.toInt256();
-        //         }
-        //         state.amountCalculated += (step.amountIn + step.feeAmount)
-        //             .toInt256();
-        //     }
+            state.amountSpecifiedRemaining -= step.amountOut;
+            state.amountCalculated += (step.amountIn + step.feeAmount);
 
-        //     // if the protocol fee is on, calculate how much is owed, decrement feeAmount, and increment protocolFee
-        //     if (cache.feeProtocol > 0) {
-        //         unchecked {
-        //             uint256 delta = step.feeAmount / cache.feeProtocol;
-        //             step.feeAmount -= delta;
-        //             state.protocolFee += uint128(delta);
-        //         }
-        //     }
+            // if (exactInput) {
+            //     // safe because we test that amountSpecified > amountIn + feeAmount in SwapMath
+            //     unchecked {
+            //         state.amountSpecifiedRemaining -= (step.amountIn +
+            //             step.feeAmount).toInt256();
+            //     }
+            //     state.amountCalculated -= step.amountOut.toInt256();
+            // } else {
+            //     unchecked {
+            //         state.amountSpecifiedRemaining += step.amountOut.toInt256();
+            //     }
+            //     state.amountCalculated += (step.amountIn + step.feeAmount)
+            //         .toInt256();
+            // }
 
-        //     // update global fee tracker
-        //     if (state.liquidity > 0) {
-        //         unchecked {
-        //             state.feeGrowthGlobalX128 += FullMath.mulDiv(
-        //                 step.feeAmount,
-        //                 FixedPoint128.Q128,
-        //                 state.liquidity
-        //             );
-        //         }
-        //     }
-        // }
+            // if the protocol fee is on, calculate how much is owed, decrement feeAmount, and increment protocolFee
+            if (cache.feeProtocol > 0) {
+                unchecked {
+                    uint256 delta = step.feeAmount / cache.feeProtocol;
+                    step.feeAmount -= delta;
+                    state.protocolFee += uint128(delta);
+                }
+            }
+
+            // update global fee tracker
+            if (state.density > 0) {
+                unchecked {
+                    state.feeGrowthGlobalX128 += FullMath.mulDiv(
+                        step.feeAmount,
+                        FixedPoint128.Q128,
+                        state.density
+                    );
+                }
+            }
+        }
     }
 }

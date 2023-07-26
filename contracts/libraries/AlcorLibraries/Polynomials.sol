@@ -124,12 +124,15 @@ library Polynomials {
     function calculate_rho(
         uint256 C,
         AlphasVector memory alphasVector
-    ) internal pure returns (int256) {
+    ) internal pure returns (uint256) {
+        // for correct values, rho can't be negative
         return
-            alphasVector.alpha1.mul(int(C.powu(3))).div(1 ether) +
-            alphasVector.alpha2.mul(int(C.powu(2))).div(1 ether) +
-            alphasVector.alpha3.mul(int(C.powu(1))).div(1 ether) +
-            alphasVector.alpha4;
+            uint256(
+                alphasVector.alpha1.mul(int(C.powu(3))).div(1 ether) +
+                    alphasVector.alpha2.mul(int(C.powu(2))).div(1 ether) +
+                    alphasVector.alpha3.mul(int(C.powu(1))).div(1 ether) +
+                    alphasVector.alpha4
+            );
     }
 
     function calculate_dy_alphas(
