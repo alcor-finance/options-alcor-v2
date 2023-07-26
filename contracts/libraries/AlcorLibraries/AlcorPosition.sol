@@ -45,13 +45,13 @@ library Position {
 
     /// @notice Credits accumulated fees to a user's position
     /// @param self The individual position to update
-    /// @param feeGrowthInside0X128 The all-time fee growth in token0, per unit of liquidity, inside the position's tick boundaries
-    /// @param feeGrowthInside1X128 The all-time fee growth in token1, per unit of liquidity, inside the position's tick boundaries
+    // /// @param feeGrowthInside0X128 The all-time fee growth in token0, per unit of liquidity, inside the position's tick boundaries
+    // /// @param feeGrowthInside1X128 The all-time fee growth in token1, per unit of liquidity, inside the position's tick boundaries
     function update(
         Info storage self,
         Polynomials.AlphasVector memory alphasDelta,
-        uint256 feeGrowthInside0X128,
-        uint256 feeGrowthInside1X128
+        uint256 feeGrowthInsideX128
+        // uint256 feeGrowthInside1X128
     ) internal {
         Info memory _self = self;
 

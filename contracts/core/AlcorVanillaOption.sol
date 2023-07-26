@@ -82,6 +82,8 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
 
     // uint128 public liquidity;
 
+    Tick.FeeGrowthX128 public feeGrowthGlobalX128;
+
     uint256 public density;
 
     mapping(int24 => Tick.Info) public ticks;
@@ -231,22 +233,6 @@ abstract contract AlcorVanillaOption is NoDelegateCall {
     }
 
     // ------------------ old ------------------
-
-    function claimProtocolFees(
-        address token,
-        uint256 amount
-    ) external onlyFactoryOwner {
-        // TODO: do not forget about put option (there's all in usdc)
-        // if (token == optionMainInfo.token0) {
-        //     require(amount <= token0_unclaimedProtocolFees, "amount too big");
-        //     token0_unclaimedProtocolFees -= amount;
-        //     TransferHelper.safeTransfer(token, msg.sender, amount);
-        // } else {
-        //     require(amount <= token1_unclaimedProtocolFees, "amount too big");
-        //     token1_unclaimedProtocolFees -= amount;
-        //     TransferHelper.safeTransfer(token, msg.sender, amount);
-        // }
-    }
 
     function getPayout() public {
         require(optionMainInfo.isExpired, "option is not expired");

@@ -73,7 +73,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
         // here we use the current tick as the lower tick
         position = positions.get(owner, tick, tickUpper);
 
-        uint256 _feeGrowthGlobal1X128 = feeGrowthGlobal1X128; // SLOAD for gas optimization
+        Tick.FeeGrowthX128 memory _feeGrowthGlobalX128 = feeGrowthGlobalX128; // SLOAD for gas optimization
 
         // if we need to update the ticks, do it
         bool flippedMiddle;
@@ -105,8 +105,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                 tick,
                 tick,
                 alphasDelta,
-                0, // _feeGrowthGlobal0X128
-                _feeGrowthGlobal1X128,
+                _feeGrowthGlobalX128,
                 secondsPerLiquidityCumulativeX128,
                 tickCumulative,
                 time,
@@ -121,8 +120,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                     alpha3: -alphasDelta.alpha3,
                     alpha4: -alphasDelta.alpha4
                 }),
-                0, // _feeGrowthGlobal0X128,
-                _feeGrowthGlobal1X128,
+                _feeGrowthGlobalX128,
                 secondsPerLiquidityCumulativeX128,
                 tickCumulative,
                 time,
@@ -137,8 +135,7 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                     alpha3: -alphasDelta.alpha3,
                     alpha4: -alphasDelta.alpha4
                 }),
-                0, // _feeGrowthGlobal0X128,
-                _feeGrowthGlobal1X128,
+                _feeGrowthGlobalX128,
                 secondsPerLiquidityCumulativeX128,
                 tickCumulative,
                 time,
@@ -156,19 +153,18 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
             }
         }
 
-        (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) = ticks
+        uint256 feeGrowthInsideX128 = ticks
             .getFeeGrowthInside(
                 tick, // tickLower,
                 tickUpper,
                 tick,
-                0, //_feeGrowthGlobal0X128,
-                _feeGrowthGlobal1X128
+                alphasDelta,
+                _feeGrowthGlobalX128
             );
 
         position.update(
             alphasDelta,
-            feeGrowthInside0X128,
-            feeGrowthInside1X128
+            feeGrowthInsideX128
         );
 
         console.log("position alpha 1:");
@@ -449,6 +445,57 @@ contract AlcorPoolCallOption is AlcorVanillaOption {
                     );
                 }
             }
+
+            // shift tick if we reached the next price
+            // if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
+            //     // if the tick is initialized, run the tick transition
+            //     if (step.initialized) {
+            //         // check for the placeholder value, which we replace with the actual value the first time the swap
+            //         // crosses an initialized tick
+            //         if (!cache.computedLatestObservation) {
+            //             (
+            //                 cache.tickCumulative,
+            //                 cache.secondsPerLiquidityCumulativeX128
+            //             ) = observations.observeSingle(
+            //                 cache.blockTimestamp,
+            //                 0,
+            //                 slot0Start.tick,
+            //                 slot0Start.observationIndex,
+            //                 cache.liquidityStart,
+            //                 slot0Start.observationCardinality
+            //             );
+            //             cache.computedLatestObservation = true;
+            //         }
+            //         int128 liquidityNet = ticks.cross(
+            //             step.tickNext,
+            //             (state.feeGrowthGlobalX128),
+            //             (
+            //                 zeroForOne
+            //                     ? feeGrowthGlobal1X128
+            //                     : state.feeGrowthGlobalX128
+            //             ),
+            //             cache.secondsPerLiquidityCumulativeX128,
+            //             cache.tickCumulative,
+            //             cache.blockTimestamp
+            //         );
+            //         // if we're moving leftward, we interpret liquidityNet as the opposite sign
+            //         // safe because liquidityNet cannot be type(int128).min
+            //         unchecked {
+            //             if (zeroForOne) liquidityNet = -liquidityNet;
+            //         }
+
+            //         state.liquidity = liquidityNet < 0
+            //             ? state.liquidity - uint128(-liquidityNet)
+            //             : state.liquidity + uint128(liquidityNet);
+            //     }
+
+            //     unchecked {
+            //         state.tick = zeroForOne ? step.tickNext - 1 : step.tickNext;
+            //     }
+            // } else if (state.sqrtPriceX96 != step.sqrtPriceStartX96) {
+            //     // recompute unless we're on a lower tick boundary (i.e. already transitioned ticks), and haven't moved
+            //     state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
+            // }
         }
     }
 }

@@ -2,6 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {SafeCast} from "../SafeCast.sol";
+// import {FullMath} from "../FullMath.sol";
+
+import {PRBMathSD59x18} from "../../dependencies/prb-math/contracts/PRBMathSD59x18.sol";
 
 import {TickMath} from "../TickMath.sol";
 
@@ -13,6 +16,16 @@ library Tick {
     error LO();
 
     using SafeCast for int256;
+    // using FullMath for uint256;
+
+    using PRBMathSD59x18 for int256;
+
+    struct FeeGrowthX128 {
+        int256 C3;
+        int256 C2;
+        int256 C1;
+        int256 C0;
+    }
 
     // info stored for each initialized individual tick
     struct Info {
@@ -25,8 +38,9 @@ library Tick {
         // int128 liquidityNet;
         // fee growth per unit of liquidity on the _other_ side of this tick (relative to the current tick)
         // only has relative meaning, not absolute — the value depends on when the tick is initialized
-        uint256 feeGrowthOutside0X128;
-        uint256 feeGrowthOutside1X128;
+        // uint256 feeGrowthOutside0X128;
+        // uint256 feeGrowthOutside1X128;
+        FeeGrowthX128 feeGrowthOutsideX128;
         // the cumulative tick value on the other side of the tick
         int56 tickCumulativeOutside;
         // the seconds per unit of liquidity on the _other_ side of this tick (relative to the current tick)
@@ -61,64 +75,95 @@ library Tick {
     /// @param tickLower The lower tick boundary of the position
     /// @param tickUpper The upper tick boundary of the position
     /// @param tickCurrent The current tick
-    /// @param feeGrowthGlobal0X128 The all-time global fee growth, per unit of liquidity, in token0
-    /// @param feeGrowthGlobal1X128 The all-time global fee growth, per unit of liquidity, in token1
-    /// @return feeGrowthInside0X128 The all-time fee growth in token0, per unit of liquidity, inside the position's tick boundaries
-    /// @return feeGrowthInside1X128 The all-time fee growth in token1, per unit of liquidity, inside the position's tick boundaries
+    // /// @param feeGrowthGlobal0X128 The all-time global fee growth, per unit of liquidity, in token0
+    // /// @param feeGrowthGlobal1X128 The all-time global fee growth, per unit of liquidity, in token1
+    // /// @return feeGrowthInside0X128 The all-time fee growth in token0, per unit of liquidity, inside the position's tick boundaries
+    // /// @return feeGrowthInside1X128 The all-time fee growth in token1, per unit of liquidity, inside the position's tick boundaries
     function getFeeGrowthInside(
         mapping(int24 => Tick.Info) storage self,
         int24 tickLower,
         int24 tickUpper,
         int24 tickCurrent,
-        uint256 feeGrowthGlobal0X128,
-        uint256 feeGrowthGlobal1X128
+        Polynomials.AlphasVector memory alphasDelta,
+        FeeGrowthX128 memory feeGrowthGlobalX128
     )
         internal
         view
-        returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)
+        returns (uint256 feeGrowthInsideX128)
+    // uint256 feeGrowthInside1X128
     {
         unchecked {
             Info storage lower = self[tickLower];
             Info storage upper = self[tickUpper];
 
             // calculate fee growth below
-            uint256 feeGrowthBelow0X128;
-            uint256 feeGrowthBelow1X128;
+            FeeGrowthX128 memory feeGrowthBelowX128;
+            // uint256 feeGrowthBelow1X128;
             if (tickCurrent >= tickLower) {
-                feeGrowthBelow0X128 = lower.feeGrowthOutside0X128;
-                feeGrowthBelow1X128 = lower.feeGrowthOutside1X128;
+                feeGrowthBelowX128 = lower.feeGrowthOutsideX128;
+                // feeGrowthBelow1X128 = lower.feeGrowthOutside1X128;
             } else {
-                feeGrowthBelow0X128 =
-                    feeGrowthGlobal0X128 -
-                    lower.feeGrowthOutside0X128;
-                feeGrowthBelow1X128 =
-                    feeGrowthGlobal1X128 -
-                    lower.feeGrowthOutside1X128;
+                feeGrowthBelowX128 = FeeGrowthX128({
+                    C3: feeGrowthGlobalX128.C3 - lower.feeGrowthOutsideX128.C3,
+                    C2: feeGrowthGlobalX128.C2 - lower.feeGrowthOutsideX128.C2,
+                    C1: feeGrowthGlobalX128.C1 - lower.feeGrowthOutsideX128.C1,
+                    C0: feeGrowthGlobalX128.C0 - lower.feeGrowthOutsideX128.C0
+                });
+                // feeGrowthBelow0X128 =
+                //     feeGrowthGlobal0X128 -
+                //     lower.feeGrowthOutside0X128;
+                // feeGrowthBelow1X128 =
+                //     feeGrowthGlobal1X128 -
+                //     lower.feeGrowthOutside1X128;
             }
 
             // calculate fee growth above
-            uint256 feeGrowthAbove0X128;
-            uint256 feeGrowthAbove1X128;
+            // uint256 feeGrowthAbove0X128;
+            // uint256 feeGrowthAbove1X128;
+            FeeGrowthX128 memory feeGrowthAboveX128;
+
             if (tickCurrent < tickUpper) {
-                feeGrowthAbove0X128 = upper.feeGrowthOutside0X128;
-                feeGrowthAbove1X128 = upper.feeGrowthOutside1X128;
+                feeGrowthAboveX128 = upper.feeGrowthOutsideX128;
+                // feeGrowthAbove1X128 = upper.feeGrowthOutside1X128;
             } else {
-                feeGrowthAbove0X128 =
-                    feeGrowthGlobal0X128 -
-                    upper.feeGrowthOutside0X128;
-                feeGrowthAbove1X128 =
-                    feeGrowthGlobal1X128 -
-                    upper.feeGrowthOutside1X128;
+                feeGrowthAboveX128 = FeeGrowthX128({
+                    C3: feeGrowthGlobalX128.C3 - upper.feeGrowthOutsideX128.C3,
+                    C2: feeGrowthGlobalX128.C2 - upper.feeGrowthOutsideX128.C2,
+                    C1: feeGrowthGlobalX128.C1 - upper.feeGrowthOutsideX128.C1,
+                    C0: feeGrowthGlobalX128.C0 - upper.feeGrowthOutsideX128.C0
+                });
+                // feeGrowthAbove0X128 =
+                //     feeGrowthGlobal0X128 -
+                //     upper.feeGrowthOutside0X128;
+                // feeGrowthAbove1X128 =
+                //     feeGrowthGlobal1X128 -
+                //     upper.feeGrowthOutside1X128;
             }
 
-            feeGrowthInside0X128 =
-                feeGrowthGlobal0X128 -
-                feeGrowthBelow0X128 -
-                feeGrowthAbove0X128;
-            feeGrowthInside1X128 =
-                feeGrowthGlobal1X128 -
-                feeGrowthBelow1X128 -
-                feeGrowthAbove1X128;
+            // we cast to uint256, because the correct fees are positive
+            feeGrowthInsideX128 = uint256(
+                (feeGrowthGlobalX128.C3 -
+                    feeGrowthBelowX128.C3 -
+                    feeGrowthAboveX128.C3).mul(alphasDelta.alpha1) +
+                    (feeGrowthGlobalX128.C2 -
+                        feeGrowthBelowX128.C2 -
+                        feeGrowthAboveX128.C2).mul(alphasDelta.alpha2) +
+                    (feeGrowthGlobalX128.C1 -
+                        feeGrowthBelowX128.C1 -
+                        feeGrowthAboveX128.C1).mul(alphasDelta.alpha3) +
+                    (feeGrowthGlobalX128.C0 -
+                        feeGrowthBelowX128.C0 -
+                        feeGrowthAboveX128.C0).mul(alphasDelta.alpha4)
+            );
+
+            // feeGrowthInside0X128 =
+            //     feeGrowthGlobal0X128 -
+            //     feeGrowthBelow0X128 -
+            //     feeGrowthAbove0X128;
+            // feeGrowthInside1X128 =
+            //     feeGrowthGlobal1X128 -
+            //     feeGrowthBelow1X128 -
+            //     feeGrowthAbove1X128;
         }
     }
 
@@ -126,8 +171,8 @@ library Tick {
     /// @param self The mapping containing all tick information for initialized ticks
     /// @param tick The tick that will be updated
     /// @param tickCurrent The current tick
-    /// @param feeGrowthGlobal0X128 The all-time global fee growth, per unit of liquidity, in token0
-    /// @param feeGrowthGlobal1X128 The all-time global fee growth, per unit of liquidity, in token1
+    // /// @param feeGrowthGlobal0X128 The all-time global fee growth, per unit of liquidity, in token0
+    // /// @param feeGrowthGlobal1X128 The all-time global fee growth, per unit of liquidity, in token1
     /// @param secondsPerLiquidityCumulativeX128 The all-time seconds per max(1, liquidity) of the pool
     /// @param tickCumulative The tick * time elapsed since the pool was first initialized
     /// @param time The current block timestamp cast to a uint32
@@ -138,8 +183,9 @@ library Tick {
         int24 tick,
         int24 tickCurrent,
         Polynomials.AlphasVector memory alphasDelta,
-        uint256 feeGrowthGlobal0X128,
-        uint256 feeGrowthGlobal1X128,
+        // uint256 feeGrowthGlobal0X128,
+        // uint256 feeGrowthGlobal1X128,
+        FeeGrowthX128 memory feeGrowthGlobalX128,
         uint160 secondsPerLiquidityCumulativeX128,
         int56 tickCumulative,
         uint32 time,
@@ -178,8 +224,8 @@ library Tick {
         ) {
             // by convention, we assume that all growth before a tick was initialized happened _below_ the tick
             if (tick <= tickCurrent) {
-                info.feeGrowthOutside0X128 = feeGrowthGlobal0X128;
-                info.feeGrowthOutside1X128 = feeGrowthGlobal1X128;
+                info.feeGrowthOutsideX128 = feeGrowthGlobalX128;
+                // info.feeGrowthOutside1X128 = feeGrowthGlobal1X128;
                 info
                     .secondsPerLiquidityOutsideX128 = secondsPerLiquidityCumulativeX128;
                 info.tickCumulativeOutside = tickCumulative;
@@ -209,29 +255,37 @@ library Tick {
     /// @notice Transitions to next tick as needed by price movement
     /// @param self The mapping containing all tick information for initialized ticks
     /// @param tick The destination tick of the transition
-    /// @param feeGrowthGlobal0X128 The all-time global fee growth, per unit of liquidity, in token0
-    /// @param feeGrowthGlobal1X128 The all-time global fee growth, per unit of liquidity, in token1
+    // /// @param feeGrowthGlobal0X128 The all-time global fee growth, per unit of liquidity, in token0
+    // /// @param feeGrowthGlobal1X128 The all-time global fee growth, per unit of liquidity, in token1
     /// @param secondsPerLiquidityCumulativeX128 The current seconds per liquidity
     /// @param tickCumulative The tick * time elapsed since the pool was first initialized
     /// @param time The current block.timestamp
-    /// @return liquidityNet The amount of liquidity added (subtracted) when tick is crossed from left to right (right to left)
+    // /// @return liquidityNet The amount of liquidity added (subtracted) when tick is crossed from left to right (right to left)
     function cross(
         mapping(int24 => Tick.Info) storage self,
         int24 tick,
-        uint256 feeGrowthGlobal0X128,
-        uint256 feeGrowthGlobal1X128,
+        // uint256 feeGrowthGlobal0X128,
+        // uint256 feeGrowthGlobal1X128,
+        FeeGrowthX128 memory feeGrowthGlobalX128,
         uint160 secondsPerLiquidityCumulativeX128,
         int56 tickCumulative,
         uint32 time
-    ) internal returns (int128 liquidityNet) {
+    ) internal returns (Polynomials.AlphasVector memory alphasDelta) {
         unchecked {
             Tick.Info storage info = self[tick];
-            info.feeGrowthOutside0X128 =
-                feeGrowthGlobal0X128 -
-                info.feeGrowthOutside0X128;
-            info.feeGrowthOutside1X128 =
-                feeGrowthGlobal1X128 -
-                info.feeGrowthOutside1X128;
+
+            info.feeGrowthOutsideX128 = FeeGrowthX128({
+                C3: info.feeGrowthOutsideX128.C3 - feeGrowthGlobalX128.C3,
+                C2: info.feeGrowthOutsideX128.C2 - feeGrowthGlobalX128.C2,
+                C1: info.feeGrowthOutsideX128.C1 - feeGrowthGlobalX128.C1,
+                C0: info.feeGrowthOutsideX128.C0 - feeGrowthGlobalX128.C0
+            });
+            // info.feeGrowthOutside0X128 =
+            //     feeGrowthGlobal0X128 -
+            //     info.feeGrowthOutside0X128;
+            // info.feeGrowthOutside1X128 =
+            //     feeGrowthGlobal1X128 -
+            //     info.feeGrowthOutside1X128;
             info.secondsPerLiquidityOutsideX128 =
                 secondsPerLiquidityCumulativeX128 -
                 info.secondsPerLiquidityOutsideX128;
@@ -239,6 +293,8 @@ library Tick {
                 tickCumulative -
                 info.tickCumulativeOutside;
             info.secondsOutside = time - info.secondsOutside;
+
+            alphasDelta = info.alphasDelta;
             // liquidityNet = info.liquidityNet;
         }
     }
